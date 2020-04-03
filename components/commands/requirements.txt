@@ -1,0 +1,2 @@
+aiohttp==3.0.1
+kubernetes==10.0.1

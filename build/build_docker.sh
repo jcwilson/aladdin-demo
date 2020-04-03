@@ -1,17 +1,29 @@
 #!/usr/bin/env bash
+set -eu -o pipefail
 
-echo "Building aladdin-demo docker image (~30 seconds)"
 
-BUILD_PATH="$(cd "$(dirname "$0")"; pwd)"
-PROJ_ROOT="$(cd "$BUILD_PATH/.." ; pwd)"
+function docker_build {
+    # Build an image for the specified component
+    # It will be tagged as ${PROJECT_NAME}-${component}${suffix}:${HASH}
+    local component="$1" suffix="${2:+-${2}}" dockerfile="${3:-Dockerfile}"
+    local tag="${PROJECT_NAME}-${component}${suffix}:${HASH}"
+    echo >&2
+    echo >&2 "Building docker image \"${tag}\" for component: ${component}"
+    echo >&2 "================================================================================"
+    docker >&2 build -t "$tag" -f "components/${component}/${dockerfile}" components
+    echo >&2
 
-docker_build() {
-    typeset name="$1" dockerfile="$2" context="$3"
-    TAG="$name:${HASH}"
-    docker build -t $TAG -f $dockerfile $context
+    # Return the tag value in case we need to do further work with the image
+    echo "$tag"
 }
-cd "$PROJ_ROOT"
 
-docker_build "aladdin-demo" "app/Dockerfile" "app"
 
-docker_build "aladdin-demo-commands" "app/commands_app/Dockerfile" "app"
+# Ensure the current working dir is the repository root
+BUILD_PATH="$(cd "$(dirname "$0")" || exit 1 && pwd)"
+PROJECT_ROOT="$(cd "$BUILD_PATH/.." || exit 1 && pwd)"
+cd "$PROJECT_ROOT" || exit 1
+PROJECT_NAME="$(jq -r .name <lamp.json)"
+
+docker_build >/dev/null api
+docker_build >/dev/null commands
+docker_build >/dev/null pipeline

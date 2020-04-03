@@ -1,0 +1,5 @@
+# ddtrace==0.27.1
+ddtrace-asgi==0.3.0
+fastapi==0.53.2
+uvicorn==0.11.3
+

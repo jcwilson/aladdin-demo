@@ -1,7 +1,17 @@
-# #!/usr/bin/env bash
+#!/usr/bin/env bash
+set -eu -o pipefail
 
-echo "Making sure flake8 is installed..."
-pip install flake8 &> /dev/null
+# Run static code style analysis in a docker container
 
-# ignore column width error E501
-flake8 --ignore E501 .
+# This presumes that you have pointed your docker client at minikube and
+# you've built the pipeline image.
+
+function pathnorm {
+    # Normalize the path
+    local abspath
+    abspath="$(cd "$1" || exit 1; pwd)"
+    echo "${abspath#/cygdrive}"
+}
+
+# Configuration can be found in .flake8
+docker run --rm -v "$(pathnorm "$PWD"):/code" fast-api-prototype-pipeline:local flake8 components

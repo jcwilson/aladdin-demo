@@ -1,0 +1,2 @@
+elasticsearch==5.5.3  # This major version must match the elasticsearch server version
+aredis==1.1.8

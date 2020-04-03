@@ -5,12 +5,12 @@ redis:
   create: false
   port: 6379
   containerPort: 6379
-```   
-Changing the `create` field to `true` and restarting the app with `aladdin restart` will show you redis at work. **TODO** Currently redis startup takes about 130 seconds, so wait a bit and then verify that redis is working by curling the redis endpoint of the app. 
-    
-    $ curl $(minikube service --url aladdin-demo-server)/app/redis 
-    
-This should return `I can show you the world from Redis`. In the Kubernetes dashboard, you should also see two pods, one named `aladdin-demo` and the other named `aladdin-demo-redis`. We will detail how everything fits together below. 
+```
+Changing the `create` field to `true` and restarting the app with `aladdin restart` will show you redis at work. **TODO** Currently redis startup takes about 130 seconds, so wait a bit and then verify that redis is working by curling the redis endpoint of the app.
+
+    $ curl $(minikube service --url aladdin-demo-server)/app/redis
+
+This should return `I can show you the world from Redis`. In the Kubernetes dashboard, you should also see two pods, one named `aladdin-demo` and the other named `aladdin-demo-redis`. We will detail how everything fits together below.
 
 We are using the `redis:2.8` image with no modifications, so a Dockerfile is not needed. Eventually our python app will be needing information about redis, so we can store this information as key-value pairs the [configMap](../helm/aladdin-demo/templates/shared/configMap.yaml).
 ```yaml
@@ -18,7 +18,7 @@ data:
   REDIS_CREATE: {{ .Values.redis.create | quote }}
 ```
 
-In [server/deploy.yaml](../helm/aladdin-demo/templates/server/deploy.yaml), we load the data from the [configMap](../helm/aladdin-demo/templates/shared/configMap.yaml) as environment variables. This allows the python app to access the redis information through `os.environ["KEY"]`, as we will see later. 
+In [server/deploy.yaml](../helm/aladdin-demo/templates/server/deploy.yaml), we load the data from the [configMap](../helm/aladdin-demo/templates/shared/configMap.yaml) as environment variables. This allows the python app to access the redis information through `os.environ["KEY"]`, as we will see later.
 ```yaml
 envFrom:
   - configMapRef:
@@ -64,9 +64,9 @@ if redis_conn:
 ## Redis InitContainer
 For this demo app, there is only one line of data in our redis database, so doing the population in the app will not cause any noticable problems. However, it is more likely the case that your database will have a much larger dataset. In this case, we can leverage initContainers to ensure redis is fully populated and ready to serve before starting up the main application. This avoids errors in the case where the app is running and receiving requests but the database is not, resulting in returned errors. By blocking the app, anyone that tries to connect to the app's endpoint will be told `Waiting, endpoint for service is not ready yet...`, and will retry after a short sleep instead of returning an error.
 
-We demonstrate this by having two initContainers. The first one checks to see that the redis service is running, and the second one populates the database. 
+We demonstrate this by having two initContainers. The first one checks to see that the redis service is running, and the second one populates the database.
 
-Similar to the nginx initContainer, all this requires is a definition of a name, image, and command. In order to keep files cleaner, we put the definitions in [\_redis_init.tpl](../helm/aladdin-demo/templates/redis/_redis_init.tpl), using the same `define` method for templates. 
+Similar to the nginx initContainer, all this requires is a definition of a name, image, and command. In order to keep files cleaner, we put the definitions in [\_redis_init.tpl](../helm/aladdin-demo/templates/redis/_redis_init.tpl), using the same `define` method for templates.
 ```yaml
 {{ define "redis_check" -}}
 {{ if .Values.redis.create }}
@@ -86,7 +86,7 @@ Similar to the nginx initContainer, all this requires is a definition of a name,
 - name: {{ .Chart.Name }}-redis-populate
   image: {{ .Values.deploy.ecr }}{{ .Chart.Name }}:{{ .Values.deploy.imageTag }}
   command:
-  - 'python3'
+  - 'python'
   - 'redis_util/redis_populate.py'
   envFrom:
     - configMapRef:
@@ -95,7 +95,7 @@ Similar to the nginx initContainer, all this requires is a definition of a name,
 {{ end }}
 ```
 Then, in [server/deploy.yaml](../helm/aladdin-demo/templates/server/deploy.yaml), we `include` them, which will simply copy and paste the code defined earlier in the following location. We need to manually indent it to ensure it is valid yaml.
-```yaml    
+```yaml
 initContainers:
 # initContainer that checks that redis contianer is up and running
 {{ include "redis_check" . | indent 6 }}
