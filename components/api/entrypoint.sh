@@ -3,11 +3,11 @@ set -eu
 
 if $APM_ENABLED; then
     echo "APM tracing enabled: $DATADOG_SERVICE_NAME"
-    # start our server through ddtrace-run, which will allow us to see apm tracing in datadog
+    # Start our server through ddtrace-run to activate Datadog APM tracing
     exec ddtrace-run uvicorn \
         --no-access-log \
         --no-use-colors \
-        --uds /run/socks/uvicorn.sock \
+        --uds /run/socks/uvicorn-api.sock \
         --workers "$UVICORN_WORKERS" \
         api.run:app
 else
@@ -15,10 +15,9 @@ else
     exec uvicorn \
         --no-access-log \
         --no-use-colors \
-        --uds /run/socks/uvicorn.sock \
+        --uds /run/socks/uvicorn-api.sock \
         --workers "$UVICORN_WORKERS" \
         --log-level debug \
         ${UVICORN_AUTORELOAD:+--reload} \
         api.run:app
 fi
-

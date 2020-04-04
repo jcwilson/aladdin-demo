@@ -36,7 +36,7 @@ http {
     }
 
     upstream api {
-        server unix:/run/socks/uvicorn.sock;
+        server unix:/run/socks/uvicorn-api.sock;
     }
 }
 
