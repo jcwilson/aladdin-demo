@@ -20,15 +20,15 @@ def create_app():
         app.add_middleware(TraceMiddleware, service=os.environ["DATADOG_SERVICE_NAME"])
 
     @app.get("/ping")
-    async def read_ping():
+    def read_ping():
         return {}
 
     @app.get("/app")
-    async def read_base_message():
+    def read_base_message():
         return {"message": "I can show you the world"}
 
     @app.get("/app/busy")
-    async def read_busy_message():
+    def read_busy_message():
         # A computationally intensive resource to demonstrate autoscaling
         n = 0.0001
         for i in range(1000000):
@@ -46,7 +46,7 @@ def create_app():
         logger.info("Elasticsearch backend created; enabling elasticsearch endpoints")
 
         @app.get("/app/elasticsearch")
-        async def read_elasticsearch_message():
+        def read_elasticsearch_message():
             data = elasticsearch.get(index="messages", doc_type="song", id=1)
             return {"message": data["_source"]}
 
