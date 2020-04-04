@@ -1,7 +1,7 @@
 {
     "name": "fast-api-prototype",
     "build_docker": "./build/build_docker.sh",
-    "helm_chart": "./helm/fast-api-prototype",
+    "helm_chart": "./helm",
     "docker_images": [
         "fast-api-prototype",
         "fast-api-prototype-commands"
