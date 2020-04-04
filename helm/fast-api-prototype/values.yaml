@@ -3,6 +3,7 @@
 
 app:
   uvicorn:
+    # set autoreload to true to enable (but is currently not functional)
     autoreload: ""
     workers: 16
     port: 8000
