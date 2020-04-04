@@ -3,7 +3,7 @@
     "build_docker": "./build/build_docker.sh",
     "helm_chart": "./helm",
     "docker_images": [
-        "fast-api-prototype",
+        "fast-api-prototype-api",
         "fast-api-prototype-commands"
     ]
 }
