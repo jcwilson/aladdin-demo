@@ -20,29 +20,28 @@ COPY shared/requirements.txt shared-requirements.txt
 COPY api/requirements.txt api-requirements.txt
 
 # Install requirements into ~/.local where they'll be easy to copy out.
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --user --no-cache-dir --no-warn-script-location \
+COPY pip.conf /etc/pip.conf
+RUN pip install --upgrade pip \
+    && pip install --user \
         -r shared-requirements.txt \
         -r api-requirements.txt \
     && pip check
 ### END BUILD IMAGE ###
 
 
-### SERVICE IMAGE ###
+### CONTAINER IMAGE ###
 FROM python:3.8-slim
 
 # Create unprivileged user account
 RUN useradd -m -U -d /home/aladdin-user aladdin-user
 
-# Switch to the unpriveleged user account
-USER aladdin-user
-
-# Copy installed python packages from build image and include them in $PATH.
+# Copy installed python packages from build image and include them in $PATH
+COPY pip.conf /etc/pip.conf
 COPY --from=builder --chown=aladdin-user:aladdin-user /root/.local /home/aladdin-user/.local
 ENV PATH /home/aladdin-user/.local/bin:$PATH
 
 # Display how old the python libraries are
-RUN pip list --no-cache-dir --outdated
+RUN pip list --outdated
 
 # Specify the directory that CMD executes from
 WORKDIR /srv
@@ -51,9 +50,17 @@ WORKDIR /srv
 COPY shared shared
 COPY api api
 
+# Pre-compile optimized bytecode
+# Needs to be done before switching to unpriveleged user account
+RUN python -O -m compileall \
+    && python -O -m compileall /home/aladdin-user/.local .
+
 # Ensure python can find our shared code
 ENV PYTHONPATH=/srv/shared
 
+# Switch to the unpriveleged user account
+USER aladdin-user
+
 # Run the application with uvicorn once the container has been created
-ENTRYPOINT ["/bin/sh", "api/entrypoint.sh"]
-### END SERVICE IMAGE ###
+ENTRYPOINT ["api/entrypoint.sh"]
+### END CONTAINER IMAGE ###

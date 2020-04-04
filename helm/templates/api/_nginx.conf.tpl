@@ -17,7 +17,7 @@ http {
         listen {{ .Values.app.nginx.port }};
 
         # Match incoming request uri with these prefixes and route them to the api uvicorn app
-        location ~ ^/(app|ping|_api) {
+        location ~ ^/(ping|app|_api) {
             proxy_set_header Host $http_host;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
@@ -36,7 +36,14 @@ http {
     }
 
     upstream api {
-        server unix:/run/socks/uvicorn-api.sock;
+{{ if and .Values.deploy.withMount .Values.app.uvicorn.autoreload }}
+        # UVICORN_AUTORELOAD is true
+        # It only works over http, though
+        server 127.0.0.1:{{ .Values.app.uvicorn.port }} ;
+{{ else }}
+        # UVICORN_AUTORELOAD is false
+        server unix:/run/socks/{{ .Values.app.uvicorn.domain_socket }};
+{{ end }}
     }
 }
 

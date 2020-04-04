@@ -17,8 +17,9 @@ data:
   ELASTICSEARCH_PORT: {{ .Values.elasticsearch.port | quote }}
 # uvicorn environment variables
   UVICORN_WORKERS: {{ .Values.app.uvicorn.workers | quote }}
-  UVICORN_AUTORELOAD: {{ .Values.app.uvicorn.autoreload | quote }}
+  UVICORN_AUTORELOAD: {{ and .Values.deploy.withMount .Values.app.uvicorn.autoreload | ternary "true" "false" | quote }}
   UVICORN_PORT: {{ .Values.app.uvicorn.port | quote }}
+  UVICORN_DOMAIN_SOCKET: {{ .Values.app.uvicorn.domain_socket | quote }}
 # datadog environment variables
   APM_ENABLED: {{ .Values.apm.enable | quote }}
   DATADOG_SERVICE_NAME: {{ .Chart.Name | quote }}

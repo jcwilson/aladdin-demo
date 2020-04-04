@@ -2,22 +2,7 @@
 # Application configuration
 app:
   uvicorn:
-    autoreload: ""  # Disabled for perf reasons at the moment
     workers: 1
-    port: 8000
-  nginx:
-    use: true
-    port: 80
-    httpPort: 80
-    httpsPort: 443
-  liveness:
-    use: true
-    initialDelay: 15
-    period: 120
-  readiness:
-    use: true
-    initialDelay: 5
-    period: 60
 
 # Configurations for setting up apm tracing
 apm:

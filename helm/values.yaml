@@ -3,10 +3,10 @@
 
 app:
   uvicorn:
-    # set autoreload to true to enable (but is currently not functional)
-    autoreload: ""
+    autoreload: false
     workers: 16
     port: 8000
+    domain_socket: uvicorn-api.sock
   nginx:
     use: true
     port: 80
