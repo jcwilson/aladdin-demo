@@ -1,38 +1,40 @@
 # This is the default values file, which should be treated as a template. Values should only be defined
 # here if they are shared accross all non-local environments. However, list and comment on all potential values.
 
-app:
+api:
   uvicorn:
     autoreload: false
     workers: 16
     port: 8000
-    domain_socket: uvicorn-api.sock
+    domainSocket: uvicorn-api.sock
+    logColors: false
   nginx:
     use: true
     port: 80
+  http:
     httpPort: 80
     httpsPort: 443
-  # liveness probe will restart the pod if it detects that it is unhealty
+  # Configurations for setting up apm tracing
+  apm:
+    enable: false
+    datadogTraceAgentHostname: datadog-agent.kube-system
+    datadogEnv:
+  # The liveness probe will restart the pod if it detects that it is unhealty
   liveness:
     use: true
     # number of seconds before the first probe
     initialDelay: 15
     # number of seconds for frequency between probes
     period: 120
-  # readiness probe will hold off traffic and wait until the pod is ready
+  # The readiness probe will hold off traffic and wait until the pod is ready
   readiness:
     use: true
     initialDelay: 5
     period: 60
 
-# Configurations for setting up apm tracing
-apm:
-  enable: false
-  datadog_trace_agent_hostname: datadog-agent.kube-system
-  datadog_env:
-
 deploy:
-  # number of seconds for the containers to perform a graceful shutdown, after which it is voilently terminated
+  # The number of seconds for the containers to perform a graceful shutdown,
+  # after which it is violently terminated
   terminationGracePeriod: 50
   replicas: 1
 
@@ -45,7 +47,7 @@ redis:
     initialDelay: 10
     period: 15
   readiness:
-    use: #true
+    use: true
     initialDelay: 5
     period: 10
 

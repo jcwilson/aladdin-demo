@@ -1,12 +1,10 @@
 # Values here will overwrite values.yaml defaults. These values are used when deploying to KDEV cluster
 
-app:
+api:
   uvicorn:
     workers: 8
-
-# Configurations for setting up apm tracing
-apm:
-  datadog_env: dev
+  apm:
+    datadogEnv: dev
 
 # Usually you will want to create your own instance of elasticsearch on dev, but if you are backing
 # it with a statefulset, you will need to manually provision the peristent volume beforehand and

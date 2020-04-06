@@ -1,15 +1,20 @@
 # Values here will overwrite values.yaml defaults. These values are used when deploying locally to minikube
-# Application configuration
-app:
+
+api:
   uvicorn:
     workers: 1
-    autoreload: true
+    logColors: true
+  apm:
+    datadogEnv: local
   liveness:
     use: false
   readiness:
     use: false
 
-# Configurations for setting up apm tracing
-apm:
-  datadog_env: local
+redis:
+  create: true
+
+elasticsearch:
+  create: true
+  populate: true
 

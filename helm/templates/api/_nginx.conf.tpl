@@ -9,12 +9,10 @@ events {
     worker_connections 4096;
 }
 
-# Create a server that listens on the nginx port
-
 http {
-
+    # Create a server that listens on the nginx port
     server {
-        listen {{ .Values.app.nginx.port }};
+        listen {{ .Values.api.nginx.port }};
 
         # Match incoming request uri with these prefixes and route them to the api uvicorn app
         location ~ ^/(ping|app|_api) {
@@ -35,14 +33,15 @@ http {
         }
     }
 
+    # The univorn upstream definition
     upstream api {
-{{ if and .Values.deploy.withMount .Values.app.uvicorn.autoreload }}
+{{ if .Values.api.uvicorn.autoreload }}
         # UVICORN_AUTORELOAD is true
         # It only works over http, though
-        server 127.0.0.1:{{ .Values.app.uvicorn.port }} ;
+        server 127.0.0.1:{{ .Values.api.uvicorn.port }} ;
 {{ else }}
         # UVICORN_AUTORELOAD is false
-        server unix:/run/socks/{{ .Values.app.uvicorn.domain_socket }};
+        server unix:/run/socks/{{ .Values.api.uvicorn.domainSocket }};
 {{ end }}
     }
 }

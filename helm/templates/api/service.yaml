@@ -18,19 +18,11 @@ spec:
   type: {{ .Values.service.publicServiceType | quote }}
   ports:
   - name: http
-    port: {{ .Values.app.nginx.httpPort }}
-{{ if .Values.app.nginx.use }}
-    targetPort: {{ .Values.app.nginx.port }}
-{{ else }}
-    targetPort: {{ .Values.app.uvicorn.port }}
-{{ end }}
+    port: {{ .Values.api.http.httpPort }}
+    targetPort: {{ .Values.api.nginx.use | ternary .Values.api.nginx.port .Values.api.uvicorn.port }}
   - name: https
-    port: {{ .Values.app.nginx.httpsPort }}
-{{ if .Values.app.nginx.use }}
-    targetPort: {{ .Values.app.nginx.port }}
-{{ else }}
-    targetPort: {{ .Values.app.uvicorn.port }}
-{{ end }}
+    port: {{ .Values.api.http.httpsPort }}
+    targetPort: {{ .Values.api.nginx.use | ternary .Values.api.nginx.port .Values.api.uvicorn.port }}
   selector:
-    # Get the fast-api-prototype-api deployment configuration from sever/deploy.yaml
+    # Get the fast-api-prototype-api deployment configuration from api/deploy.yaml
     name: {{ .Chart.Name }}-api

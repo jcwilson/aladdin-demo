@@ -1,12 +1,8 @@
 # Values here will overwrite values.yaml defaults. These values are used when deploying to KPROD cluster
 
-app:
-  uvicorn:
-    workers: 16
-
-# Configurations for setting up apm tracing
-apm:
-  enable: true
-  datadog_env: prod
+api:
+  apm:
+    enable: true
+    datadogEnv: prod
 
 affinity: critical-datadog-apm

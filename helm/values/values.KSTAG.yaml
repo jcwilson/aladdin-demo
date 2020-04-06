@@ -1,7 +1,7 @@
 # Values here will overwrite values.yaml defaults. These values are used when deploying to KSTAG cluster
 
-# Configurations for setting up apm tracing
-apm:
-  datadog_env: staging
+api:
+  apm:
+    datadogEnv: staging
 
 affinity: critical-datadog-apm

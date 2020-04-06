@@ -1,3 +1,8 @@
+# Define some convenience variables to make some templating logic easier.
+# For some reason uvicorn --reload does not work when serving over Unix domain sockets.
+# Unix domain sockets are more performant, but we'll use TCP if there's no nginx or if autoreload is desired.
+{{ $useUDS := and .Values.api.nginx.use (not .Values.api.uvicorn.autoreload) }}
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,16 +17,19 @@ metadata:
 data:
   REDIS_CREATE: {{ .Values.redis.create | quote }}
   ELASTICSEARCH_CREATE: {{ .Values.elasticsearch.create | quote }}
-  ELASTICSEARCH_POPULATE: {{ .Values.elasticsearch.populate | quote }}
   ELASTICSEARCH_HOST: {{ .Chart.Name }}-elasticsearch
   ELASTICSEARCH_PORT: {{ .Values.elasticsearch.port | quote }}
 # uvicorn environment variables
-  UVICORN_WORKERS: {{ .Values.app.uvicorn.workers | quote }}
-  UVICORN_AUTORELOAD: {{ and .Values.deploy.withMount .Values.app.uvicorn.autoreload | ternary "true" "false" | quote }}
-  UVICORN_PORT: {{ .Values.app.uvicorn.port | quote }}
-  UVICORN_DOMAIN_SOCKET: {{ .Values.app.uvicorn.domain_socket | quote }}
+  UVICORN_WORKERS: {{ .Values.api.uvicorn.workers | quote }}
+  UVICORN_TRANSPORT: {{ $useUDS | ternary "UDS" "TCP" | quote }}
+  UVICORN_AUTORELOAD: {{ .Values.api.uvicorn.autoreload | quote }}
+  UVICORN_ACCESS_LOG: {{ not .Values.api.nginx.use | quote }}
+  UVICORN_HOST: {{ .Values.api.nginx.use | ternary "127.0.0.1" "0.0.0.0" | quote }}
+  UVICORN_PORT: {{ .Values.api.uvicorn.port | quote }}
+  UVICORN_DOMAIN_SOCKET: {{ .Values.api.uvicorn.domainSocket | quote }}
+  UVICORN_LOG_COLORS: {{ .Values.api.uvicorn.logColors | quote }}
 # datadog environment variables
-  APM_ENABLED: {{ .Values.apm.enable | quote }}
+  APM_ENABLED: {{ .Values.api.apm.enable | quote }}
   DATADOG_SERVICE_NAME: {{ .Chart.Name | quote }}
-  DATADOG_ENV: {{ .Values.apm.datadog_env | quote }}
-  DATADOG_TRACE_AGENT_HOSTNAME: {{ .Values.apm.datadog_trace_agent_hostname | quote }}
+  DATADOG_ENV: {{ .Values.api.apm.datadogEnv | quote }}
+  DATADOG_TRACE_AGENT_HOSTNAME: {{ .Values.api.apm.datadogTraceAgentHostname | quote }}
