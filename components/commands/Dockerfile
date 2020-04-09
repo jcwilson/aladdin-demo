@@ -12,4 +12,3 @@ RUN pip list --no-cache-dir --outdated
 
 COPY shared shared
 COPY commands/commands commands
-

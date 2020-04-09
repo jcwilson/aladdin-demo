@@ -40,9 +40,14 @@ spec:
             name: {{ .Chart.Name }}
 {{ if .Values.deploy.withMount }}
         volumeMounts:
+        - mountPath: /code/shared
+          name: {{ .Chart.Name }}-shared
         - mountPath: /code/commands
           name: {{ .Chart.Name }}-commands
       volumes:
+      - name: {{ .Chart.Name }}-shared
+        hostPath:
+          path: {{ .Values.deploy.mountPath }}/components/shared
       - name: {{ .Chart.Name }}-commands
         hostPath:
           path: {{ .Values.deploy.mountPath }}/components/commands/commands

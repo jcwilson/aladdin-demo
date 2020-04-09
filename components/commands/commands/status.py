@@ -5,8 +5,8 @@ import os
 
 import aiohttp
 from aredis.exceptions import RedisError
+from elasticsearch import ElasticsearchException
 
-from shared.elasticsearch import ElasticsearchException
 from shared.elasticsearch_util.elasticsearch_connection import NoElasticSearchBackend, get_es_health
 from shared.redis_util.redis_connection import NoRedisBackend, ping_redis
 
