@@ -1,0 +1,29 @@
+{{ if .Values.lab.use }}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-lab
+  labels:
+    project: {{ .Chart.Name }}
+    name: {{ .Chart.Name }}-lab
+    app: {{ .Chart.Name }}-lab
+    githash: {{ .Values.deploy.imageTag | quote }}
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{.Values.service.certificateArn | quote}}
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+spec:
+  # Aladdin will fill this in as NodePort which will expose itself to things outside of the cluster
+  # This is to highlight difference between public and private service types, and to only use
+  # public service types when it truly should be public
+  type: {{ .Values.service.publicServiceType | quote }}
+  ports:
+  - name: http
+    port: {{ .Values.lab.http.httpPort }}
+    targetPort: {{ .Values.lab.jupyter.port }}
+  selector:
+    # Get the fast-lab-prototype-lab deployment configuration from lab/deploy.yaml
+    name: {{ .Chart.Name }}-lab
+
+{{ end }} # /lab.use

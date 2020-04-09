@@ -32,6 +32,12 @@ api:
     initialDelay: 5
     period: 60
 
+lab:
+  use: false
+  http:
+    httpPort: 8080
+  jupyter:
+    port: 8888
 deploy:
   # The number of seconds for the containers to perform a graceful shutdown,
   # after which it is violently terminated

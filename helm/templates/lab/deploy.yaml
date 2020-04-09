@@ -1,0 +1,78 @@
+{{ if .Values.lab.use }}
+
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}-lab
+  labels:
+    project: {{ .Chart.Name }}
+    name: {{ .Chart.Name }}-lab
+    app: {{ .Chart.Name }}-lab
+    githash: {{ .Values.deploy.imageTag | quote }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}-lab
+  replicas: {{ .Values.deploy.replicas }}
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        project: {{ .Chart.Name }}
+        name: {{ .Chart.Name }}-lab
+        app: {{ .Chart.Name }}-lab
+    spec:
+      # Number of seconds for the containers to perform a graceful shutdown,
+      # after which it is voilently terminated. This defaults to 30s, most apps may not need to change it
+      terminationGracePeriodSeconds: {{ .Values.deploy.terminationGracePeriod }}
+      # Only schedule pods on nodes with the affinity: critical-datadog-apm label
+      {{ if .Values.affinity }}
+      nodeSelector:
+        affinity: {{ .Values.affinity }}
+      {{ end }}
+      containers:
+################################################################
+############# fast-api-prototype-lab app container #############
+      - name: {{ .Chart.Name }}-lab
+        # Docker image for this container
+        image: {{ .Values.deploy.ecr }}{{ .Chart.Name }}-lab:{{ .Values.deploy.imageTag }}
+        volumeMounts:
+          - mountPath: /home/jovyan/.jupyter/jupyter_notebook_config.py
+            name: {{ .Chart.Name }}-jupyter
+            subPath: jupyter_notebook_config.py
+{{ if .Values.deploy.withMount }}
+          # Mount our local code into the container
+          - mountPath: /code
+            name: {{ .Chart.Name }}-components
+{{ end }} # /deploy.withMount
+        ports:
+          - containerPort: {{ .Values.lab.jupyter.port }}
+            protocol: TCP
+        envFrom:
+          # Load the data from configMap into the runtime environment
+          # This allows us to use os.environ["KEY"] to look up variables
+          - configMapRef:
+              name: {{ .Chart.Name }}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 200m
+            memory: 200Mi
+###################### end of containers #######################
+################################################################
+
+      # Specify volumes that will be mounted in the containers
+      volumes:
+        - name: {{ .Chart.Name }}-jupyter
+          configMap:
+            name: {{ .Chart.Name }}-jupyter
+{{ if .Values.deploy.withMount }}
+        - name: {{ .Chart.Name }}-components
+          hostPath:
+            path: {{ .Values.deploy.mountPath }}/components
+{{ end }} # /deploy.withMount
+
+{{ end }} # /lab.use

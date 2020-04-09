@@ -27,3 +27,4 @@ PROJECT_NAME="$(jq -r .name <lamp.json)"
 docker_build >/dev/null api
 docker_build >/dev/null commands
 docker_build >/dev/null pipeline
+docker_build >/dev/null lab

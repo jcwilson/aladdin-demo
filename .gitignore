@@ -1,6 +1,13 @@
 # Local overrides that you don't want to commit to the repo
 helm/values/site.yaml
 
+# User-specific jupyter notebook journal
+.ipynb_checkpoints
+# Omit unrecognized jupyter notebooks
+components/lab/work/*.ipynb
+# Include recognized jupyter notebooks
+!components/lab/work/test.ipynb
+
 # Note: If you're thinking about adding IDE-related or language artifacts here
 #       consider adding those to your global git core.excludesfile instead.
 #       Entries here should relate to files specific and relevant to this project.

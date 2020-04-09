@@ -11,6 +11,9 @@ api:
   readiness:
     use: false
 
+lab:
+  use: true
+
 redis:
   create: true
 

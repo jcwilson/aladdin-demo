@@ -10,8 +10,8 @@ events {
 }
 
 http {
-    # Create a server that listens on the nginx port
     server {
+        # Create a server that listens on the nginx port
         listen {{ .Values.api.nginx.port }};
 
         # Match incoming request uri with these prefixes and route them to the api uvicorn app
@@ -24,9 +24,9 @@ http {
             proxy_pass http://api;
         }
 
-        # Otherwise, nginx tries to serve static content. The only file should exist is index.html,
-        # which is written by the initContainer. Get requests with "/" or "/index.html" will return
-        # a short message, everything else will return 404
+        # Otherwise, nginx tries to serve static content. The only file that should exist is
+        # index.html, which is written by the initContainer. Get requests with "/" or
+        # "/index.html" will return a short message, everything else will return 404.
         location / {
             root /usr/share/nginx/html;
             index index.html;
@@ -38,7 +38,7 @@ http {
 {{ if .Values.api.uvicorn.autoreload }}
         # UVICORN_AUTORELOAD is true
         # It only works over http, though
-        server 127.0.0.1:{{ .Values.api.uvicorn.port }} ;
+        server 127.0.0.1:{{ .Values.api.uvicorn.port }};
 {{ else }}
         # UVICORN_AUTORELOAD is false
         server unix:/run/socks/{{ .Values.api.uvicorn.domainSocket }};

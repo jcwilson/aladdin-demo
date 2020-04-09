@@ -3,9 +3,10 @@ import math
 import os
 
 from ddtrace_asgi.middleware import TraceMiddleware
-from elasticsearch_util.elasticsearch_connection import connection as elasticsearch
 from fastapi import FastAPI
-from redis_util.redis_connection import connection as redis
+
+from shared.elasticsearch_util.elasticsearch_connection import connection as elasticsearch
+from shared.redis_util.redis_connection import connection as redis
 
 
 logger = logging.getLogger()
