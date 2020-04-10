@@ -14,4 +14,14 @@ function pathnorm {
 }
 
 # Configuration can be found in .flake8
+echo "Checking code format..."
+docker run --rm -v "$(pathnorm "$PWD"):/code" fast-api-prototype-pipeline:local black --check --diff components
+echo
+
+echo "Checking style..."
+docker run --rm -v "$(pathnorm "$PWD"):/code" fast-api-prototype-pipeline:local prospector components
+echo
+
+echo "Checking import ordering..."
 docker run --rm -v "$(pathnorm "$PWD"):/code" fast-api-prototype-pipeline:local flake8 components
+echo

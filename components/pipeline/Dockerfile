@@ -15,14 +15,21 @@ RUN apt-get update \
         libc6-dev \
     && apt-get clean
 
-# Copy requirements.txt to the docker container
-COPY pipeline/requirements.txt requirements.txt
+# Copy our requirements.txt files to the docker container
+COPY shared/requirements.txt shared-requirements.txt
+COPY api/requirements.txt api-requirements.txt
+COPY commands/requirements.txt commands-requirements.txt
+COPY pipeline/requirements.txt pipeline-requirements.txt
 
 # Install requirements into ~/.local where they'll be easy to copy out
 COPY pip.conf /etc/pip.conf
 RUN pip install --upgrade pip \
-    && pip install --user -r requirements.txt \
-    && pip check
+    && pip install --user \
+        -r shared-requirements.txt \
+        -r api-requirements.txt \
+        -r commands-requirements.txt \
+        -r pipeline-requirements.txt
+    # && pip check
 ### END BUILD IMAGE ###
 
 
