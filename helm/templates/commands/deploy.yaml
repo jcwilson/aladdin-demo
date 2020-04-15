@@ -29,26 +29,21 @@ spec:
         imagePullPolicy: {{.Values.deploy.imagePullPolicy}}
         name: {{ .Chart.Name }}-commands
         env:
-          - name: PROJECT_NAME
-            value: {{ .Chart.Name }}
-          - name: NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
+        - name: PROJECT_NAME
+          value: {{ .Chart.Name }}
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         envFrom:
         - configMapRef:
             name: {{ .Chart.Name }}
 {{ if .Values.deploy.withMount }}
         volumeMounts:
-        - mountPath: /code/shared
-          name: {{ .Chart.Name }}-shared
         - mountPath: /code/commands
-          name: {{ .Chart.Name }}-commands
+          name: {{ .Chart.Name }}-components
       volumes:
-      - name: {{ .Chart.Name }}-shared
+      - name: {{ .Chart.Name }}-components
         hostPath:
-          path: {{ .Values.deploy.mountPath }}/components/shared
-      - name: {{ .Chart.Name }}-commands
-        hostPath:
-          path: {{ .Values.deploy.mountPath }}/components/commands/commands
+          path: {{ .Values.deploy.mountPath }}/components
 {{ end }} # /withMount

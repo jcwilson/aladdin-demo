@@ -9,6 +9,7 @@ pylint:
       - logger
   disable:
     - import-error
+    - wrong-import-order
   enable:
     - bad-continuation
 

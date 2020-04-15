@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "fast-api-prototype-shared"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+elasticsearch = "5.5.3"
+aredis = "1.1.8"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

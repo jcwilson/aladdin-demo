@@ -50,7 +50,7 @@ spec:
 {{ end }} # /$useUDS
 {{ if .Values.deploy.withMount }}
           # Mount our local code into the container
-          - mountPath: /srv
+          - mountPath: /code
             name: {{ .Chart.Name }}-components
 {{ end }} # /deploy.withMount
         ports:

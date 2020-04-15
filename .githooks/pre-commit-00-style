@@ -4,7 +4,15 @@ set -eu -o pipefail
 # Run static code style analysis in a docker container
 
 # This presumes that you have pointed your docker client at minikube and
-# you've built the pipeline image.
+# built the style and import-order components.
+
+function check {
+    local operation="$1" tag="${2}:local"; shift 2
+
+    echo "Checking ${operation} with $* ..."
+    docker run --rm -v "$(pathnorm "$PWD")/components:/code" "$tag" "$@"
+    echo
+}
 
 function pathnorm {
     # Normalize the path
@@ -13,15 +21,11 @@ function pathnorm {
     echo "${abspath#/cygdrive}"
 }
 
-# Configuration can be found in .flake8
-echo "Checking code format..."
-docker run --rm -v "$(pathnorm "$PWD"):/code" fast-api-prototype-pipeline:local black --check --diff components
-echo
+# Configuration can be found in components/pyproject.yaml
+check "code format" fast-api-prototype-style black --check --diff --target-version py38 .
 
-echo "Checking style..."
-docker run --rm -v "$(pathnorm "$PWD"):/code" fast-api-prototype-pipeline:local prospector components
-echo
+# Configuration can be found in components/prospector.yaml
+check "style" fast-api-prototype-style prospector
 
-echo "Checking import ordering..."
-docker run --rm -v "$(pathnorm "$PWD"):/code" fast-api-prototype-pipeline:local flake8 components
-echo
+# Configuration can be found in components/.flake8
+check "import ordering" fast-api-prototype-import-order flake8

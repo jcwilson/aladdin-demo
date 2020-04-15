@@ -1,3 +1,6 @@
+.dockerignore
+**/Dockerfile*
+**/*.dockerfile
+**/*.Dockerfile
 **/__pycache__
-**/.dockerignore
-**/Dockerfile
+**/component.yaml
