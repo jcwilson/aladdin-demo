@@ -11,15 +11,15 @@ FROM $BUILDER_IMAGE AS builder
 
 # Install packages required to build native library components
 RUN apt-get update \
-    && apt-get -y --no-install-recommends install \
-        gettext \
-        gcc \
-        g++ \
-        make \
-        libc6-dev \
-    && apt-get clean
+ && apt-get -y --no-install-recommends install \
+    gettext \
+    gcc \
+    g++ \
+    make \
+    libc6-dev \
+ && apt-get clean
 
-# Upgrade and configure pip
+# Upgrade pip
 RUN pip install --upgrade pip
 
 # Configure pip
@@ -27,8 +27,8 @@ COPY pip.conf /etc/pip.conf
 
 # Install poetry under the root user's home directory
 ARG POETRY_VERSION
-ADD https://raw.githubusercontent.com/python-poetry/poetry/${POETRY_VERSION}/get-poetry.py /tmp/get-poetry.py
-RUN python /tmp/get-poetry.py
+ADD https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py /tmp/get-poetry.py
+RUN python /tmp/get-poetry.py --version $POETRY_VERSION
 
 # Configure poetry
 COPY poetry.toml /root/.config/pypoetry/config.toml
@@ -39,7 +39,7 @@ WORKDIR /build
 # Copy the component's poetry files
 # This assumes the build script has omitted everything but the component's poetry
 # files, like {component}/pyproject.toml and {component}/poetry.lock from the context
-# with a just-in-time created .dockerignore file.
+# with a just-in-time created dynamic .dockerignore file.
 COPY . .
 
 # Install our project dependencies if they are specified in the pyproject.toml and
@@ -48,9 +48,10 @@ ARG COMPONENT
 ARG POETRY_NO_DEV
 ARG PYTHON_OPTIMIZE
 RUN cd "$COMPONENT" \
-    && . /root/.poetry/env \
-    && poetry install $POETRY_NO_DEV \
-    && python $PYTHON_OPTIMIZE -m compileall /root/.local
+ && mkdir -p /root/.local \
+ && . /root/.poetry/env \
+ && poetry install $POETRY_NO_DEV \
+ && python $PYTHON_OPTIMIZE -m compileall /root/.local
 ### END MULTISTAGE BUILD ###############################################################
 # We can now copy the contents of /root/.local to our concrete image
 ########################################################################################
@@ -59,7 +60,7 @@ RUN cd "$COMPONENT" \
 
 
 ### POPULATE IMAGE BUILD ###############################################################
-# This is where we copy the results of the python library installation into our eventual
+# This is where we copy the results of the python package installation into our eventual
 # concrete image, leaving all the build tooling behind.
 ########################################################################################
 FROM $FROM_IMAGE

@@ -1,0 +1,13 @@
+meta:
+  version: 1
+language:
+  name: python
+  version: 3.8.2
+image:
+  user_info:
+    name: aladdin-user
+    group: aladdin-user
+    home: /home/aladdin-user
+dependencies:
+- commands
+- api

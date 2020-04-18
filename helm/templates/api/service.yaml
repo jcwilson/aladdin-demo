@@ -24,5 +24,5 @@ spec:
     port: {{ .Values.api.http.httpsPort }}
     targetPort: {{ .Values.api.nginx.use | ternary .Values.api.nginx.port .Values.api.uvicorn.port }}
   selector:
-    # Get the fast-api-prototype-api deployment configuration from api/deploy.yaml
+    # Get the api deployment configuration from api/deploy.yaml
     name: {{ .Chart.Name }}-api

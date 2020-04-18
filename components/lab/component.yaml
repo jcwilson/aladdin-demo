@@ -1,19 +1,13 @@
 meta:
-  format_version: 1
+  version: 1
+
 language:
   name: python
   version: 3.7.6
 
-clusters:
-- minikube
-- KDEV
-
 image:
   base: jupyter/minimal-notebook:dc9744740e12
-  aladdinize: false
-  add_poetry: false
 
 dependencies:
-- shared
 - commands
 - api

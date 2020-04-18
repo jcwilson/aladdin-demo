@@ -1,0 +1,21 @@
+:mod:`commands`
+===============
+
+.. py:module:: commands
+
+.. autoapi-nested-parse::
+
+   Aladdin commands for this project.
+
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   get_pods/index.rst
+   status/index.rst
+
+

@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "fast-api-prototype-commands"
+name = "commands"
 version = "0.1.0"
-description = ""
+description = "Modules found here define aladdin commands"
 authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]

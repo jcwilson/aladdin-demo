@@ -1,0 +1,21 @@
+:mod:`shared.elasticsearch_util`
+================================
+
+.. py:module:: shared.elasticsearch_util
+
+.. autoapi-nested-parse::
+
+   Code for accessing and manipulating an Elasticsearch database.
+
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   elasticsearch_connection/index.rst
+   elasticsearch_populate/index.rst
+
+

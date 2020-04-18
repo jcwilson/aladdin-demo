@@ -1,0 +1,21 @@
+:mod:`shared`
+=============
+
+.. py:module:: shared
+
+.. autoapi-nested-parse::
+
+   Utility code shared across multiple components in a modular fashion.
+
+
+
+Subpackages
+-----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 3
+
+   elasticsearch_util/index.rst
+   redis_util/index.rst
+
+

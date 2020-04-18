@@ -11,10 +11,8 @@
 
 {{ define "redis_populate" -}}
 - name: {{ .Chart.Name }}-redis-populate
-  image: {{ .Values.deploy.ecr }}{{ .Chart.Name }}-commands:{{ .Values.deploy.imageTag }}
-  command:
-  - 'python'
-  - 'shared/redis_util/redis_populate.py'
+  image: {{ .Values.deploy.ecr }}{{ .Chart.Name }}-init:{{ .Values.deploy.imageTag }}
+  command: ["populate-redis"]
   envFrom:
     - configMapRef:
         name: {{ .Chart.Name }}

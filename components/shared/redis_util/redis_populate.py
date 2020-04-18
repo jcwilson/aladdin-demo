@@ -1,30 +1,13 @@
-"""
-Functionality to populate the redis cluster with some initial data.
-
-This can imported to get the populate() function, or run directly as a script.
-"""
-import asyncio
+"""Functionality to populate the redis cluster with some initial data."""
 import logging
 
-from redis_connection import CONNECTION
+from aredis import StrictRedis
+
+logger = logging.getLogger(__name__)
 
 
-def main():
-    """Set up the logging config and populate the cluster."""
-    logging.basicConfig(
-        format="%(levelname)-8s %(name)s(%(lineno)d) %(message)s", level=logging.INFO
-    )
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(populate(CONNECTION))
-
-
-async def populate(connection):
+async def populate(connection: StrictRedis):
     """Create a single boilerplate record in the elasticsearch cluster."""
-    logging.info("Populating redis...")
+    logger.info("Populating redis...")
     await connection.set("msg", "I can show you the world from Redis")
-    logging.info("Redis populated")
-
-
-if __name__ == "__main__":
-    main()
+    logger.info("Redis populated")

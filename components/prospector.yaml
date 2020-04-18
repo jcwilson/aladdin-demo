@@ -1,3 +1,4 @@
+# Utilized by the pipeline component, but the rules apply to all component code.
 # Overrides https://github.com/PyCQA/prospector/blob/master/prospector/profiles/profiles/strictness_veryhigh.yaml
 
 strictness: veryhigh

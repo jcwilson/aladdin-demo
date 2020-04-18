@@ -1,9 +1,8 @@
 meta:
-  format_version: 1
+  version: 1
 language:
   name: python
 image:
   base: fivestarsos/commands-base:2.0.0
-  aladdinize: false
 dependencies:
 - shared

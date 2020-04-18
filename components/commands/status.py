@@ -10,7 +10,6 @@ from elasticsearch import ElasticsearchException
 from shared.elasticsearch_util.elasticsearch_connection import NoElasticSearchBackend, get_es_health
 from shared.redis_util.redis_connection import NoRedisBackend, ping_redis
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -41,9 +40,9 @@ async def print_api_status():
         async with ClientSession() as session:
             async with session.get(url) as response:
                 if response.status == 200:
-                    logger.info("API server ping successful")
+                    logger.success("API server ping successful")
                 else:
-                    logger.info("API server ping failed with status code %s", response.status)
+                    logger.error("API server ping failed with status code %s", response.status)
                 await response.text()
     except ClientConnectionError:
         logger.exception("Failed to connect to API server")
@@ -54,10 +53,9 @@ async def print_redis_status():
     # TODO have this ping external redis when that gets added
     logger.debug("Pinging redis...")
     try:
-        status = await ping_redis()
-        logger.info("Redis ping successful: %s", status)
+        logger.success("Redis ping: %s", await ping_redis())
     except NoRedisBackend:
-        logger.warning("Redis creation flag set to false; no connection available at this time")
+        logger.notice("Redis creation flag set to false; no connection available at this time")
     except RedisError:
         logger.exception("Failed to query redis server")
 
@@ -67,9 +65,9 @@ def print_elasticsearch_status():
     logger.debug("Getting elasticsearch health...")
     try:
         status = get_es_health()
-        logger.info("Elasticsearch health retrieved: %s", status)
+        logger.success("Elasticsearch health: %s", status)
     except NoElasticSearchBackend:
-        logger.warning(
+        logger.notice(
             "Elasticsearch creation flag set to false; no connection available at this time"
         )
     except ElasticsearchException:

@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "fast-api-prototype-api"
+name = "api"
 version = "0.1.0"
-description = ""
+description = "The HTTP API server for this project"
 authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]

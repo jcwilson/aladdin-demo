@@ -10,18 +10,18 @@ FROM $BUILDER_IMAGE as builder
 # Configure pip
 COPY pip.conf /etc/pip.conf
 
-# Install poetry under the aladdin-user, then switch back to root
+# Install poetry
 ARG POETRY_VERSION=1.0.5
-ADD https://raw.githubusercontent.com/python-poetry/poetry/${POETRY_VERSION}/get-poetry.py /tmp/get-poetry.py
-RUN python /tmp/get-poetry.py
+ADD https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py /tmp/get-poetry.py
+RUN python /tmp/get-poetry.py --version $POETRY_VERSION
 
 # Configure poetry
 COPY poetry.toml /root/.config/pypoetry/config.toml
-########################################################################################
+### END MULTISTAGE BUILD ###############################################################
 
 
 
-### BUILD POETRY PACKAGE MANAGER #######################################################
+### INSTALL POETRY PACKAGE MANAGER #######################################################
 # Copy the poetry tool and its configuration into the target image. This also includes
 # a bit of pip global configuration since poetry uses it under the hood (as do our
 # own tools).

@@ -11,10 +11,8 @@
 
 {{ define "elasticsearch_populate" -}}
 - name: {{ .Chart.Name }}-elasticsearch-populate
-  image: {{ .Values.deploy.ecr }}{{ .Chart.Name }}-commands:{{ .Values.deploy.imageTag }}
-  command:
-  - 'python'
-  - 'shared/elasticsearch_util/elasticsearch_populate.py'
+  image: {{ .Values.deploy.ecr }}{{ .Chart.Name }}-init:{{ .Values.deploy.imageTag }}
+  command: ["populate-elasticsearch"]
   envFrom:
     - configMapRef:
         name: {{ .Chart.Name }}

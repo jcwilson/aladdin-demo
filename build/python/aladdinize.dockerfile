@@ -21,6 +21,7 @@ RUN python $PYTHON_OPTIMIZE -m compileall
 
 # Use our own special directory for our code
 WORKDIR /code
+ENV PYTHONPATH /code
 
 # Create and switch to the unprivileged user account
 RUN useradd -m -U -d /home/aladdin-user aladdin-user

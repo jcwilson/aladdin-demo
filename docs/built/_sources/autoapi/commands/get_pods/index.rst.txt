@@ -1,0 +1,24 @@
+:mod:`commands.get_pods`
+========================
+
+.. py:module:: commands.get_pods
+
+.. autoapi-nested-parse::
+
+   A command to return a list of pods for this service.
+
+
+
+Module Contents
+---------------
+
+.. function:: get_pods(_)
+
+   Log the list of pods for this service.
+
+
+.. function:: get_service_pods()
+
+   Query kubernetes for the list of pods for this service.
+
+

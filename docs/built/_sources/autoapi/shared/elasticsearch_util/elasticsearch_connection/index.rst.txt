@@ -1,0 +1,34 @@
+:mod:`shared.elasticsearch_util.elasticsearch_connection`
+=========================================================
+
+.. py:module:: shared.elasticsearch_util.elasticsearch_connection
+
+.. autoapi-nested-parse::
+
+   Provides a connection to the elasticsearch backend and some basic convenience functionality.
+
+
+
+Module Contents
+---------------
+
+.. py:exception:: NoElasticSearchBackend
+
+   Bases: :class:`Exception`
+
+   Raised if connection does not exist because we didn't create the backend service.
+
+
+.. data:: CONNECTION
+   
+
+   The Elasticsearch connection object, if available
+
+
+.. function:: get_es_health() -> dict
+
+   Get the Elasticsearch cluster health report.
+
+   :return: The health results
+
+

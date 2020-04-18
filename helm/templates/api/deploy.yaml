@@ -35,9 +35,8 @@ spec:
         affinity: {{ .Values.affinity }}
       {{ end }}
       containers:
-############# fast-api-prototype-api app container #############
-## This is a container that runs the fast-api-prototype app with
-## uvicorn+FastAPI server
+####################### api container ##########################
+## This is a container that runs the uvicorn+FastAPI server
 ################################################################
       - name: {{ .Chart.Name }}-api
         # Docker image for this container

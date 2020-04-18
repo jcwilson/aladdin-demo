@@ -12,7 +12,6 @@ from shared.elasticsearch_util.elasticsearch_connection import (
 )
 from shared.redis_util.redis_connection import CONNECTION as REDIS_CONNECTION
 
-
 logger = logging.getLogger()
 
 

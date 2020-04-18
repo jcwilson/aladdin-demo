@@ -8,6 +8,12 @@ components/lab/work/*.ipynb
 # Include recognized jupyter notebooks
 !components/lab/work/test.ipynb
 
+# Sphinx build assets
+docs/built/.doctrees/environment.pickle
+
+# Poetry build assets
+*.egg-info
+
 # Note: If you're thinking about adding IDE-related or language artifacts here
 #       consider adding those to your global git core.excludesfile instead.
 #       Entries here should relate to files specific and relevant to this project.

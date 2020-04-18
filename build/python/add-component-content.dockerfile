@@ -7,6 +7,11 @@ FROM $FROM_IMAGE
 # Copy component code to the WORKDIR
 COPY . .
 
+# Install the component itself (this installs any poetry scripts as command line commands)
+ARG COMPONENT
+ARG POETRY_INSTALL_COMPONENT
+RUN if $POETRY_INSTALL_COMPONENT; then cd "$COMPONENT" && poetry install; fi
+
 # Pre-compile optimized bytecode for our component packages
 ARG PYTHON_OPTIMIZE
 RUN python $PYTHON_OPTIMIZE -m compileall .

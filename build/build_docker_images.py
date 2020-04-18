@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+"""
+The aladdin build script indicated in this project's lamp.json file.
 
+It will run when ``aladdin build`` is invoked.
+"""
 import atexit
 import collections
 import functools
@@ -16,6 +20,7 @@ import typing
 import yaml
 
 import coloredlogs
+import networkx
 import verboselogs
 
 
@@ -48,21 +53,19 @@ class ComponentConfig:
 
     def __init__(self, data: dict):
         self._data = data
-        self.validate()
-
-    def validate(self):
-        """Raises a ConfigurationException if the values are invalid."""
 
     def get(self, path: str, default: typing.Any = UNDEFINED):
-        """Perform a dot-delimited lookup on the provided path name."""
+        """
+        Perform a lookup on the provided path name.
+
+        :param path: The dot-delimited path to the config value.
+        :param default: The value to return if the config value was not found.
+        """
         return functools.reduce(
             lambda d, key: d.get(key, default) if isinstance(d, dict) else default,
             path.split("."),
             self._data,
         )
-
-    def should_build_for_cluster(self, cluster: str):
-        return self.clusters is UNDEFINED or cluster in self.clusters
 
     @property
     def version(self):
@@ -79,30 +82,28 @@ class ComponentConfig:
         return str(version) if version else UNDEFINED
 
     @property
-    def clusters(self):
-        return self.get("clusters")
-
-    @property
     def image_base(self):
         return self.get("image.base")
 
     @property
     def image_aladdinize(self):
-        return self.get("image.aladdinize")
+        return self.get("image.aladdinize", True if self.image_base is UNDEFINED else False)
 
     @property
     def image_add_poetry(self):
-        return self.get("image.add_poetry")
+        return self.get("image.add_poetry", True if self.image_base is UNDEFINED else False)
+
+    @property
+    def image_user_info(self):
+        return UserInfo(
+            name=self.get("image.user.name"),
+            group=self.get("image.user.group"),
+            home=self.get("image.user.home"),
+        )
 
     @property
     def dependencies(self):
-        return self.get("dependencies")
-
-    @property
-    def user_info(self):
-        return UserInfo(
-            name=self.get("user.name"), group=self.get("user.group"), home=self.get("user.home")
-        )
+        return self.get("dependencies", [])
 
 
 class BuildInfo(
@@ -111,6 +112,7 @@ class BuildInfo(
         [
             "project",
             "to_publish",
+            "component_graph",
             "component",
             "config",
             "hash",
@@ -142,15 +144,12 @@ class BuildInfo(
         )
 
     @property
-    def has_python_dependencies(self):
-        component_path = pathlib.Path("components") / self.component
-        pyproject_path = component_path / "pyproject.toml"
-        lock_path = component_path / "poetry.lock"
-        return pyproject_path.exists() and lock_path.exists()
-
-    @property
     def tag(self):
         return f"{self.project}-{self.component}:{self.hash}"
+
+    @property
+    def editor_tag(self):
+        return f"{self.project}-{self.component}:editor"
 
     @property
     def dev(self):
@@ -191,11 +190,20 @@ class BuildInfo(
 
     @property
     def user_info(self):
-        return getattr(self, "_user_info", self.config.user_info)
+        return getattr(self, "_user_info", self.config.image_user_info)
 
     @property
-    def dependencies(self):
-        return self.config.dependencies or []
+    def dependencies(self) -> typing.Tuple[str]:
+        """
+        The topologically sorted list of dependencies required for this component.
+
+        This will include the complete hierarchy of dependencies for this component, so it is only
+        necessary to enumerate a component's direct dependencies in the component.yaml file.
+        """
+        dependencies = networkx.algorithms.dag.ancestors(self.component_graph, self.component)
+        return tuple(
+            networkx.algorithms.dag.topological_sort(self.component_graph.subgraph(dependencies))
+        )
 
 
 class DockerIgnore:
@@ -215,7 +223,38 @@ class DockerIgnore:
         self.write("### Ephemeral modifications ###")
         self.write("# Specific instructions")
 
+    def append_file(self, file_path_to_append: pathlib.Path, prefix: str = ""):
+        """
+        Append the contents of a file to the .dockerignore file.
+
+        If ``prefix`` is provided, any non-comment, non-empty lines will have the prefix applied as
+        they are appended to the .dockerignore file.
+
+        :param file_path_to_append: The components/ directory-relative path to the file to append.
+        :param prefix: The directory prefix to apply to all lines in the appended file.
+        """
+        relative_path = file_path_to_append.relative_to(pathlib.Path("components"))
+        with open(file_path_to_append) as file_to_append:
+            self.write("")
+            self.write(f"### Contents of {relative_path.as_posix()} ###")
+            line = file_to_append.readline()
+            while line:
+                # Prefix non-comment, non-blank lines with the provided prefix
+                line = line.strip()
+                if line.startswith("#"):
+                    self.write(line)
+                elif line:
+                    self.write(f"{prefix}{line.rstrip()}")
+                else:
+                    self.write("")
+                line = file_to_append.readline()
+
     def ignore_all(self):
+        """
+        Add a line that instructs docker to not send anything in the context.
+
+        It is expected that this is followed by calls to ``include()``.
+        """
         self.ignore("**")
 
     def ignore_defaults(self):
@@ -225,12 +264,27 @@ class DockerIgnore:
         self.write(self._original_content)
 
     def ignore(self, entry: str):
+        """
+        Explicitly ignore ``entry``.
+
+        :param entry: The pattern to ignore.
+        """
         self.write(entry)
 
     def include(self, entry: str):
+        """
+        Explicitly include ``entry`` after a previous ``ignore_all()`` call.
+
+        :param entry: The pattern to include.
+        """
         self.write(f"!{entry}")
 
     def write(self, entry: str):
+        """
+        Write the entry line with a new-line to the ignore file and then flush the file.
+
+        :param entry: The pattern to write.
+        """
         self._ignore_file.write(f"{entry}\n")
         self._ignore_file.flush()
 
@@ -265,10 +319,21 @@ def dockerignore(mode: str):
     return decorator
 
 
+def main():
+    """Kick off the build process with data gathered from the system and environment."""
+
+    # Provide the lamp.json file data to the build process
+    with open("lamp.json") as file:
+        lamp = json.load(file)
+
+    # Let's get to it!
+    build(lamp=lamp, hash=os.getenv("HASH", "local"), components=sys.argv[1:])
+
+
 def build(
     lamp: dict,
     hash: str,
-    components: typing.List = None,
+    components: typing.List[str] = None,
     default_python_version: str = "3.8",
     poetry_version: str = "1.0.5",
 ):
@@ -277,65 +342,110 @@ def build(
 
     If components is empty, this will assume each directory in the components/ directory is a
     component and will build each of them.
+
+    :param lamp: The data from the project's lamp.json file.
+    :param hash: The build hash provided by ``aladdin build``.
+    :param components: The list of components to build, defaults to all of them.
+    :param default_python_version: The python version to use for the base image if not provided in
+                                   the component's ``component.yaml`` file, defaults to ``"3.8"``.
+    :param poetry_version: The version of poetry to install in the component images, defaults to
+                           ``"1.0.5"``.
     """
+    components_path = pathlib.Path("components")
+    all_components = [
+        item
+        for item in os.listdir(components_path)
+        if os.path.isdir(components_path / item) and not item.startswith("_")
+    ]
+
     if not components:
         # Just build everything
-        path = pathlib.Path("components")
-        components = [item for item in os.listdir(path) if os.path.isdir(path / item)]
+        components = all_components
+    else:
+        for component in components:
+            if component not in all_components:
+                raise ValueError(f"Component '{component}' does not exist")
+
+    if not components:
+        logger.info(
+            "No components found for this project. Create a component directory to get started."
+        )
+        return
+
+    # Check for cycles in the component dependency graph
+    component_graph = validate_component_dependencies(components=all_components)
 
     for component in components:
+        logger.notice("Starting build for %s component", component)
         # Read the component.yaml file
-        component_config = create_component_config(component)
+        component_config = read_component_config(component)
 
-        # This provides a secondary check against accidentally publishing and/or deploying
-        # a dev component to a hosted cluster.
-        if component_config.should_build_for_cluster(os.environ["CLUSTER_NAME"]):
+        # We currently assume every component is python.
+        # This assumption could conceivably be configured in the lamp.json file for
+        # language-homogenous projects.
+        language = component_config.language_name or "python"
 
-            # We currently assume every component is python.
-            # This assumption could conceivably be configured in the lamp.json file for
-            # language-homogenous projects.
-            language = component_config.language_name or "python"
+        if language == "python":
+            build_info = BuildInfo(
+                project=lamp["name"],
+                to_publish=lamp["docker_images"],
+                component_graph=component_graph,
+                component=component,
+                config=component_config,
+                hash=hash,
+                # TODO: Handle these in a better manner when adding support for other languages
+                default_language_version=default_python_version,
+                poetry_version=poetry_version,
+            )
 
-            if language == "python":
-                build_info = BuildInfo(
-                    project=lamp["name"],
-                    to_publish=lamp["docker_images"],
-                    component=component,
-                    config=component_config,
-                    hash=hash,
-                    # TODO: Handle these in a better manner when adding support for other languages
-                    default_language_version=default_python_version,
-                    poetry_version=poetry_version,
-                )
-
-                language_version = build_info.language_version
-                if language_version.startswith("3"):
-                    # We only support python 3 components at the moment
-                    build_python_component_image(build_info)
-                else:
-                    raise ValueError(
-                        f"Unsupported python version for {component} component: {language_version}"
-                    )
+            language_version = build_info.language_version
+            if language_version.startswith("3"):
+                # We only support python 3 components at the moment
+                build_python_component_image(build_info)
             else:
                 raise ValueError(
-                    f"Unsupported language for {component} component: {language}:{language_version}"
+                    f"Unsupported python version for {component} component: {language_version}"
                 )
         else:
-            logger.notice(
-                "Not building %s component due to '%s' not being in the cluster whitelist",
-                component,
-                os.environ["CLUSTER_NAME"],
+            raise ValueError(
+                f"Unsupported language for {component} component: {language}:{language_version}"
             )
-            build_empty_image(build_info)
     else:
         logger.success("Built images for components: %s", ", ".join(components))
 
 
-def create_component_config(component: str) -> ComponentConfig:
+def validate_component_dependencies(components: typing.List[str]) -> networkx.DiGraph:
     """
-    Read the component's component.yaml file into a ComponentConfig object.
+    Confirm that the components' dependency hierarchy has no cycles.
 
-    If the component does not provide a component.yaml file, this returns an empty ComponentConfig.
+    :return: The component dependency graph
+    """
+    # Create our component dependency graph
+    component_graph = networkx.DiGraph()
+    component_graph.add_nodes_from(components)
+    for component in components:
+        config = read_component_config(component)
+        component_graph.add_edges_from(
+            (dependency, component) for dependency in config.dependencies
+        )
+
+    # Check for dependency cycles
+    try:
+        cycles = networkx.algorithms.cycles.find_cycle(component_graph)
+    except networkx.exception.NetworkXNoCycle:
+        return component_graph
+    else:
+        logger.error("Cycle(s) found in component dependency graph: %s", cycles)
+        raise ConfigurationException("Cycle(s) found in component dependency graph", cycles)
+
+
+def read_component_config(component: str) -> ComponentConfig:
+    """
+    Read the component's ``component.yaml`` file into a ``ComponentConfig`` object.
+
+    :param component: The component's config to read.
+    :return: The config data for the component. If the component does not provide a
+             ``component.yaml`` file, this returns an empty config.
     """
     try:
         with open(pathlib.Path("components") / component / "component.yaml") as file:
@@ -346,52 +456,32 @@ def create_component_config(component: str) -> ComponentConfig:
         return ComponentConfig({})
 
 
-def build_empty_image(build_info: BuildInfo):
-    """
-    Build an image that simply displays a message explaining why the expected image wasn't built.
-    """
-    _docker_build(
-        dockerfile="build/python/echo-message.dockerfile",
-        tag=build_info.tag,
-        buildargs=dict(
-            MESSAGE=(
-                textwrap.dedent(
-                    f"""
-                    This image was published but is not meant to be run in this environment.
-
-                    If you're seeing this, you probably need to add this cluster to the
-                    clusters list in the components/{build_info.component}/component.yaml file.
-                    """
-                )
-            )
-        ),
-    )
-
-
 def build_python_component_image(build_info: BuildInfo):
     """
     Build the component.
 
-    This builds the component image according to the component.yaml configuration. It begins by
-    building a base image and then adding to it things like the poetry tool and any component
-    dependency assets.
+    This builds the component image according to the ``component.yaml`` configuration. It begins by
+    building or tagging a base image and then adding to it things like the poetry tool and any
+    component dependency assets.
+
+    :param build_info: The build info populated from the config and command line arguments.
     """
     try:
         logger.notice("Building image for component: %s", build_info.component)
         # Start off by simply tagging our base image
-        # All subsequents steps here will just move the tag to the newly built image
+        # All subsequent steps here will just move the tag to the newly built image
         tag_base_image(build_info)
 
-        # One can opt out by setting image.aladdinize: false
+        # Opt out by setting image.aladdinize=false or by specifying a base image
         if build_info.aladdinize:
             aladdinize_image(build_info)
 
-        # One can opt out by not providing a Dockerfile in the component directory
+        # Opt out by not providing a Dockerfile in the component directory
         if build_info.specialized_dockerfile:
             build_specialized_image(build_info)
 
         # Extract some values from the base image for the build info
-        python_version, user_info = get_base_image_info(build_info)
+        python_version, user_info = get_image_details(build_info)
         # Set the python version so the builder image can use the same
         # python version as the base image
         build_info.set_language_version(python_version)
@@ -399,15 +489,18 @@ def build_python_component_image(build_info: BuildInfo):
         # and python libraries in the correct location
         build_info.set_user_info(user_info)
 
-        # Opt out by setting image.add_poetry: false
+        # Opt out by setting image.add_poetry=false or by specifying a base image
         if build_info.add_poetry:
             add_poetry(build_info)
 
         # Add the component dependencies' assets
-        add_dependencies(build_info)
+        add_dependency_components(build_info)
 
         # Add the component's assets
         add_component(build_info, build_info.component)
+
+        # Build the editor image for facilitating poetry package updates
+        build_editor_image(build_info)
 
     except Exception:
         logger.error("Failed to build image for component: %s", build_info.component)
@@ -420,28 +513,38 @@ def tag_base_image(build_info: BuildInfo):
     """
     Tag the starting point image.
 
-    Most components will build of the default image (hopefully always somewhat close to the latest
-    python release).
+    Most components will build off of the default image (hopefully always somewhat close to the
+    latest python release).
 
-    If one does not wish to use the default image, provide another in the image.base field of the
-    component.yaml.
+    If one does not wish to use the default image, provide another in the ``image.base`` field of
+    the ``component.yaml``.
+
+    :param build_info: The build info populated from the config and command line arguments.
     """
     logger.info(
         "Tagging base image '%s' for %s component", build_info.base_image, build_info.component
     )
+
     _check_call(["docker", "tag", build_info.base_image, build_info.tag])
 
 
-def aladdinize_image(build_info: BuildInfo):
+@dockerignore("w")
+def aladdinize_image(build_info: BuildInfo, ignore_file: DockerIgnore):
     """
     Add the aladdin boilerplate.
 
-    This creates the aladdin-user user and sets the WORKDIR to /code.
+    This creates the aladdin-user user and sets the ``WORKDIR`` to ``/code``.
 
-    If one does not wish to add the aladdin boilerplate, specify image.aladdinize as false in the
-    component.yaml.
+    If one does not wish to add the aladdin boilerplate, specify ``image.aladdinize`` as ``false``
+    in the ``component.yaml``.
+
+    :param build_info: The build info populated from the config and command line arguments.
+    :param ignore_file: The ``.dockerignore`` file handle to be used to update its contents.
     """
     logger.info("Adding aladdin boilerplate to %s component", build_info.component)
+
+    ignore_file.ignore_all()
+
     _docker_build(
         dockerfile="build/python/aladdinize.dockerfile",
         tag=build_info.tag,
@@ -454,10 +557,14 @@ def add_poetry(build_info: BuildInfo, ignore_file: DockerIgnore):
     """
     Add the poetry package manager to the image.
 
-    This allows one to use the image to create/modify the pyproject.toml and poetry.lock files
-    for a component.
+    This allows one to use the image to create/modify the ``pyproject.toml`` and ``poetry.lock``
+    files for a component.
+
+    :param build_info: The build info populated from the config and command line arguments.
+    :param ignore_file: The ``.dockerignore`` file handle to be used to update its contents.
     """
     logger.info("Adding poetry to %s component", build_info.component)
+
     ignore_file.ignore_all()
     ignore_file.include("pip.conf")
     ignore_file.include("poetry.toml")
@@ -476,19 +583,29 @@ def add_poetry(build_info: BuildInfo, ignore_file: DockerIgnore):
     )
 
 
-def build_specialized_image(build_info: BuildInfo):
+@dockerignore("a")
+def build_specialized_image(build_info: BuildInfo, ignore_file: DockerIgnore):
     """
-    Apply the component's Dockerfile to the image.
+    Apply the component's ``Dockerfile`` to the image.
 
     This allows one to further customize the (possibly aladdinized) base image with more specific
-    Dockerfile instructions. The context provided to the Dockerfile is the full components/
+    Dockerfile instructions. The context provided to the Dockerfile is the full ``components/``
     directory, minus the .dockerignore items, of course.
+
+    :param build_info: The build info populated from the config and command line arguments.
+    :param ignore_file: The ``.dockerignore`` file handle to be used to update its contents.
     """
     logger.info(
         "Building specialized image for %s component (dockerfile=%s)",
         build_info.component,
         build_info.specialized_dockerfile,
     )
+
+    component_dockerignore_path = (
+        pathlib.Path("components") / build_info.component / ".dockerignore"
+    )
+    if component_dockerignore_path.exists():
+        ignore_file.append_file(component_dockerignore_path, prefix=f"{build_info.component}/")
 
     _docker_build(
         dockerfile=build_info.specialized_dockerfile,
@@ -497,87 +614,161 @@ def build_specialized_image(build_info: BuildInfo):
     )
 
 
-def get_base_image_info(build_info: BuildInfo) -> UserInfo:
-    """Extract the user, group and home directory of the image's USER."""
+def get_image_details(build_info: BuildInfo) -> (str, UserInfo):
+    """
+    Extract python version and the user, group and home directory of the image's ``USER``.
+
+    :param build_info: The build info populated from the config and command line arguments.
+    :return: The python version string and the user info from the current image.
+    """
+    logger.info("Extracting base image info")
+
+    # Build a temporary image that can be used to pull image data out of the container.
+    # We need to get rid of the ENTRYPOINT and CMD configurations.
     _docker_build(
         dockerfile="build/python/lobotomize.dockerfile",
-        tag="user_extractor",
+        tag="info_extractor",
         buildargs=dict(FROM_IMAGE=build_info.tag),
     )
 
-    def _call(command: str):
-        return (
-            subprocess.check_output(
-                ["docker", "run", "--rm", "user_extractor", "/bin/sh", "-c", command]
-            )
-            .decode("utf8")
-            .strip()
-        )
-
-    # TODO: Figure out when we can skip this discovery
-    #       A component that provides these values in their component.yaml shouldn't check. (done)
-    #       A component based on our default base image shouldn't check either.
-    python_version = build_info.config.language_version
-    user_info = build_info.config.user_info
     try:
-        if python_version:
-            logger.notice("Using configured python version: %s", python_version)
-        else:
-            try:
-                python_version = _call(
-                    "python -c 'import platform; print(platform.python_version())'"
-                )
-                assert (
-                    python_version.count(".") == 2
-                ), f"Unexpected python version string: {retrieved_version}"
-                logger.notice("Extracted python version from base image: %s", python_version)
-            except Exception:
-                logger.warning("Failed to extract python version from base image")
-                python_version = "3.8"
-
-        if user_info:
-            logger.notice("Using configured user info: %s", user_info)
-        else:
-            try:
-                user_name, user_groups, user_home = _call("whoami; groups; echo $HOME").split("\n")
-                user_groups = user_groups.split()
-                user_info = UserInfo(
-                    name=user_name, group=user_groups[0] if user_groups else None, home=user_home
-                )
-                logger.notice("Extracted user info from base image: %s", user_info)
-            except Exception:
-                logger.warning("Failed to extract user info from base image")
-                user_info = UserInfo(name=None, group=None, home=None)
+        return get_image_python_version(build_info), get_image_user_info(build_info)
     finally:
-        _check_call(["docker", "rmi", "user_extractor"])
-
-    return python_version, user_info
+        _check_call(["docker", "rmi", "info_extractor"])
 
 
-def add_dependencies(build_info: BuildInfo):
+def get_image_python_version(build_info: BuildInfo) -> str:
+    """
+    Retrieve the image's python version either from the component.yaml config or the image itself.
+
+    :param build_info: The build info populated from the config and command line arguments.
+    :return: The python version string.
+    """
+    # Go directly to the config here
+    if build_info.config.language_version:
+        logger.notice("Using configured python version: %s", build_info.config.language_version)
+        return build_info.config.language_version
+
+    try:
+        python_version = _call_in_lobotomized_image(
+            "python -c 'import platform; print(platform.python_version())'"
+        )
+        assert (
+            python_version.count(".") == 2
+        ), f"Unexpected python version string: {retrieved_version}"
+        logger.notice("Extracted python version from base image: %s", python_version)
+    except Exception:
+        logger.warning("Failed to extract python version from base image")
+        python_version = "3.8"
+    return python_version
+
+
+def get_image_user_info(build_info: BuildInfo) -> UserInfo:
+    """
+    Retrieve the image's user info either from the component.yaml config or the image itself.
+
+    :param build_info: The build info populated from the config and command line arguments.
+    :return: The user info.
+    """
+    # Go directly to the config here
+    if build_info.config.image_user_info:
+        logger.notice("Using configured user info: %s", user_info)
+        return build_info.config.image_user_info
+
+    try:
+        user_name, user_groups, user_home = _call_in_lobotomized_image(
+            "whoami; groups; echo $HOME"
+        ).split("\n")
+        user_groups = user_groups.split()
+        user_info = UserInfo(
+            name=user_name, group=user_groups[0] if user_groups else None, home=user_home
+        )
+        logger.notice("Extracted user info from base image: %s", user_info)
+        assert all(user_info)
+        return user_info
+    except Exception:
+        logger.error("Failed to extract user info from base image")
+        raise ConfigurationException("You must provide image.user_info in component.yaml")
+
+
+def _call_in_lobotomized_image(shell_command: str) -> str:
+    """
+    Execute a shell command in a container from the lobotomized image.
+
+    :param shell_command: The command to execute.
+    :return: The resulting stdout output string.
+    """
+    sp = subprocess.run(
+        ["docker", "run", "--rm", "info_extractor", "/bin/sh", "-c", shell_command],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+    return sp.stdout.decode(sys.stdout.encoding).strip()
+
+
+def add_dependency_components(build_info: BuildInfo):
     """
     Add all of the components' dependencies to the image.
 
-    This will iterate over all of the dependencies found in the component's component.yaml and copy
-    in the dependencies' poetry-managed libraries as well as the dependencies' code itself.
+    This will iterate recursively over all of the dependencies found in the component's
+    component.yaml and copy in the dependencies' poetry-managed libraries as well as the
+    dependencies' code itself.
+
+    :param build_info: The build info populated from the config and command line arguments.
     """
-    for component in build_info.dependencies:
-        add_component(build_info, component)
+    dependencies = build_info.dependencies
+
+    if dependencies:
+        logger.info(
+            "Processing dependencies for %s: %s", build_info.component, ", ".join(dependencies)
+        )
+        for component in dependencies:
+            add_component(build_info, component)
 
 
 def add_component(build_info: BuildInfo, component: str):
-    """Add a component's poetry-managed libraries and the component's own code to the image."""
+    """
+    Add a component's poetry-managed libraries and the component's own assets to the image.
 
-    logger.info("Adding %s dependency to %s component", component, build_info.component)
-    if build_info.has_python_dependencies:
-        add_component_python_dependencies(build_info, component)
-    add_component_content(build_info, component)
+    If ``component`` is the component whose image is currently being built and it appears to be
+    using poetry to define its project, it will also be ``poetry installed`` in the image. This is
+    to account for any components that define commands under ``[tool.poetry.scripts]`` in their
+    ``pyproject.toml`` file. Those commands will be available in the container as first-class
+    command line commands.
+
+    :param build_info: The build info populated from the config and command line arguments.
+    :param component: The component to add to the image.
+    """
+    logger.info("Adding %s to %s component", component, build_info.component)
+
+    # Determine if component we are adding has python package dependencies that need to be installed
+    component_path = pathlib.Path("components") / component
+    pyproject_path = component_path / "pyproject.toml"
+    lock_path = component_path / "poetry.lock"
+    component_has_python_packages = pyproject_path.exists() and lock_path.exists()
+
+    if component_has_python_packages:
+        add_component_python_packages(build_info, component)
+    add_component_content(
+        build_info=build_info,
+        component=component,
+        poetry_install_component=(
+            component == build_info.component and component_has_python_packages
+        ),
+    )
 
 
 @dockerignore("w")
-def add_component_python_dependencies(
-    build_info: BuildInfo, component: str, ignore_file: DockerIgnore
-):
+def add_component_python_packages(build_info: BuildInfo, component: str, ignore_file: DockerIgnore):
+    """
+    Add the poetry-managed python packages from the specified component to the image.
+
+    :param build_info: The build info populated from the config and command line arguments.
+    :param component: The component's python packages to add to the image.
+    :param ignore_file: The ``.dockerignore`` file handle to be used to update its contents.
+    """
+    logger.info("Adding %s python dependencies to %s component", component, build_info.component)
+
     # Only keep the files for performing a poetry install
     ignore_file.ignore_all()
     ignore_file.include("pip.conf")
@@ -603,17 +794,65 @@ def add_component_python_dependencies(
 
 
 @dockerignore("w")
-def add_component_content(build_info: BuildInfo, component: str, ignore_file: DockerIgnore):
+def add_component_content(
+    build_info: BuildInfo, component: str, poetry_install_component: bool, ignore_file: DockerIgnore
+):
+    """
+    Copy in the component's code and other data.
+
+    This will populate the component's directory in the image.
+
+    :param build_info: The build info populated from the config and command line arguments.
+    :param component: The component's content to add to the image.
+    :param poetry_install_component: Whether or not to do one final ``poetry install`` for this
+                                     component. When this is enabled, this will install any poetry
+                                     scripts defined by the component into the ~/.local/bin
+                                     directory, thus making them available for unqualified CLI
+                                     invocation.
+    :param ignore_file: The ``.dockerignore`` file handle to be used to update its contents.
+    """
+    logger.info("Adding %s content to %s component", component, build_info.component)
+
     # Only keep the component content files
     ignore_file.ignore_all()
     ignore_file.include(component)
     ignore_file.ignore_defaults()
 
+    # But allow the component to also indicate what they wish to ignore
+    component_dockerignore_path = pathlib.Path("components") / component / ".dockerignore"
+    if component_dockerignore_path.exists():
+        ignore_file.append_file(component_dockerignore_path, prefix=f"{component}/")
+
     # Copy the built poetry dependencies and the component code into the target image
     _docker_build(
         dockerfile="build/python/add-component-content.dockerfile",
         tag=build_info.tag,
-        buildargs=dict(FROM_IMAGE=build_info.tag, PYTHON_OPTIMIZE=build_info.python_optimize),
+        buildargs=dict(
+            FROM_IMAGE=build_info.tag,
+            COMPONENT=component,
+            POETRY_INSTALL_COMPONENT="true" if poetry_install_component else "false",
+            PYTHON_OPTIMIZE=build_info.python_optimize,
+        ),
+    )
+
+
+@dockerignore("w")
+def build_editor_image(build_info: BuildInfo, ignore_file: DockerIgnore):
+    """
+    Build a companion image to the final built image that removes the ENTRYPOINT and CMD settings.
+
+    This image can be used for shelling into for debugging and/or running arbitrary commands in a
+    mirror of the built image.
+
+    :param build_info: The build info populated from the config and command line arguments.
+    :param ignore_file: The ``.dockerignore`` file handle to be used to update its contents.
+    """
+    ignore_file.ignore_all()
+
+    _docker_build(
+        dockerfile="build/python/lobotomize.dockerfile",
+        tag=build_info.editor_tag,
+        buildargs=dict(FROM_IMAGE=build_info.tag),
     )
 
 
@@ -622,6 +861,10 @@ def _docker_build(dockerfile: str, tag: str, buildargs: dict = None):
     A convenience wrapper for calling out to "docker build".
 
     We always send the same context: the components/ directory.
+
+    :param dockerfile: The dockerfile to build against.
+    :param tag: The tag to be applied to the built image.
+    :param buildargs: Values for ARG instructions in the dockerfile.
     """
     buildargs = buildargs or {}
 
@@ -631,24 +874,15 @@ def _docker_build(dockerfile: str, tag: str, buildargs: dict = None):
     cmd.extend(["--tag", tag, "-f", dockerfile, "components"])
 
     # Log the build command in a more readable format
-    #
-    # Example output:
-    # DEBUG    docker build --tag fast-api-prototype-style:local -f <dockerfile> components
-    #              BUILDER_IMAGE=python:3.8-slim
-    #              COMPONENT=style
-    #              FROM_IMAGE=fast-api-prototype-style:local
-    #              POETRY_NO_DEV=
-    #              POETRY_VERSION=1.0.5
-    #              PYTHON_OPTIMIZE=
-    #              USER_CHOWN=aladdin-user:aladdin-user
-    #              USER_HOME=/home/aladdin-user
     logger.debug(
-        f"docker build --tag {tag} -f {dockerfile} components"
+        "docker build --tag %s -f %s components"
         + "\n"
         + textwrap.indent(
             "\n".join(f"{key}={value}" for key, value in sorted(buildargs.items())), " " * 13
         )
-        + "\n"
+        + "\n",
+        tag,
+        dockerfile,
     )
 
     # Log the .dockerignore file contents used for the build
@@ -662,16 +896,22 @@ def _docker_build(dockerfile: str, tag: str, buildargs: dict = None):
     _check_call(cmd)
 
 
-def _check_call(cmd: typing.List):
-    """Make a subprocess call and indent its output to match our python logging format."""
+def _check_call(cmd: typing.List[str]):
+    """
+    Make a subprocess call and indent its output to match our python logging format.
+
+    :param cmd: The command to run.
+    """
     ps = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    subprocess.check_call(["sed", "-e", "s/^/         /"], stdin=ps.stdout)
+    subprocess.run(["sed", "-e", "s/^/         /"], stdin=ps.stdout, check=True)
     ps.wait()
+    if ps.returncode:
+        raise subprocess.CalledProcessError(ps.returncode, cmd)
 
 
 if __name__ == "__main__":
     # Install some nice logging tools
-    logging.setLoggerClass(verboselogs.VerboseLogger)
+    verboselogs.install()
     coloredlogs.install(
         level=logging.DEBUG,
         fmt="%(levelname)-8s %(message)s",
@@ -679,21 +919,24 @@ if __name__ == "__main__":
             spam=dict(color="green", faint=True),
             debug=dict(color="black", bold=True),
             verbose=dict(color="blue"),
-            info=dict(color="cyan"),
+            info=dict(color="white"),
             notice=dict(color="magenta"),
             warning=dict(color="yellow"),
             success=dict(color="green", bold=True),
             error=dict(color="red"),
             critical=dict(color="red", bold=True),
         ),
+        field_styles=dict(
+            asctime=dict(color="green"),
+            hostname=dict(color="magenta"),
+            levelname=dict(color="white"),
+            name=dict(color="white", bold=True),
+            programname=dict(color="cyan"),
+            username=dict(color="yellow"),
+        ),
     )
 
     # This will be a VerboseLogger
     logger = logging.getLogger(__name__)
 
-    # Discover the project name for reporting/tagging purposes
-    with open("lamp.json") as file:
-        lamp = json.load(file)
-
-    # Let's get to it!
-    build(lamp=lamp, hash=os.getenv("HASH", "local"), components=sys.argv[1:])
+    main()

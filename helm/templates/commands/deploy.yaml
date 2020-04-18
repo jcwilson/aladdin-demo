@@ -40,7 +40,7 @@ spec:
             name: {{ .Chart.Name }}
 {{ if .Values.deploy.withMount }}
         volumeMounts:
-        - mountPath: /code/commands
+        - mountPath: /code
           name: {{ .Chart.Name }}-components
       volumes:
       - name: {{ .Chart.Name }}-components

@@ -14,10 +14,15 @@ CONNECTION = (
     if os.environ["ELASTICSEARCH_CREATE"] == "true"
     else None
 )
+"""The Elasticsearch connection object, if available"""
 
 
 def get_es_health() -> dict:
-    """Get the elasticsearch cluster health report."""
+    """
+    Get the Elasticsearch cluster health report.
+
+    :return: The health results
+    """
     if not CONNECTION:
         raise NoElasticSearchBackend
     return CONNECTION.cluster.health()

@@ -1,5 +1,5 @@
 apiVersion: autoscaling/v2beta1
-# This is an autoscaler for fast-api-prototype
+# This is an autoscaler for the server deployment
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ .Chart.Name }}-hpa

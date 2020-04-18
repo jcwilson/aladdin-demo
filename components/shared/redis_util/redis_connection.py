@@ -17,10 +17,15 @@ CONNECTION = (
     if os.environ["REDIS_CREATE"] == "true"
     else None
 )
+"""The aredis connection object, if available"""
 
 
 async def ping_redis() -> dict:
-    """Check to see if redis backend is available."""
+    """
+    Check to see if redis backend is available.
+
+    :return: The connection ping results
+    """
     if not CONNECTION:
         raise NoRedisBackend
     return await CONNECTION.ping()

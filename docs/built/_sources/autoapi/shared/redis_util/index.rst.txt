@@ -1,0 +1,21 @@
+:mod:`shared.redis_util`
+========================
+
+.. py:module:: shared.redis_util
+
+.. autoapi-nested-parse::
+
+   Code for accessing and manipulating a redis database.
+
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   redis_connection/index.rst
+   redis_populate/index.rst
+
+

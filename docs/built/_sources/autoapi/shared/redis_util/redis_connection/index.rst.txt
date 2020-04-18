@@ -1,0 +1,35 @@
+:mod:`shared.redis_util.redis_connection`
+=========================================
+
+.. py:module:: shared.redis_util.redis_connection
+
+.. autoapi-nested-parse::
+
+   Provides a connection to the redis backend and some basic convenience functionality.
+
+
+
+Module Contents
+---------------
+
+.. py:exception:: NoRedisBackend
+
+   Bases: :class:`Exception`
+
+   Raised if connection does not exist because we didn't create the backend service.
+
+
+.. data:: CONNECTION
+   
+
+   The aredis connection object, if available
+
+
+.. function:: ping_redis() -> dict
+   :async:
+
+   Check to see if redis backend is available.
+
+   :return: The connection ping results
+
+

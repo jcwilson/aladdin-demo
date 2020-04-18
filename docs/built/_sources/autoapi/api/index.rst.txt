@@ -1,0 +1,21 @@
+:mod:`api`
+==========
+
+.. py:module:: api
+
+.. autoapi-nested-parse::
+
+   The HTTP API layer for this project.
+
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   app/index.rst
+   run/index.rst
+
+

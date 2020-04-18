@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "fast-api-prototype-shared"
+name = "shared"
 version = "0.1.0"
-description = ""
+description = "This our library code that needs to be shared across several components."
 authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]

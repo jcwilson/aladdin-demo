@@ -4,7 +4,6 @@ import os
 
 from kubernetes import client, config
 
-
 logger = logging.getLogger(__name__)
 
 
