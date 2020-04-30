@@ -160,6 +160,10 @@
 
 <span class="kn">import</span> <span class="nn">coloredlogs</span>
 <span class="kn">import</span> <span class="nn">verboselogs</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">from</span> <span class="nn">networkx</span> <span class="kn">import</span> <span class="n">DiGraph</span>
+<span class="kn">from</span> <span class="nn">networkx.algorithms.cycles</span> <span class="kn">import</span> <span class="n">find_cycle</span>
+<span class="kn">from</span> <span class="nn">networkx.exception</span> <span class="kn">import</span> <span class="n">NetworkXNoCycle</span>
 
 <span class="c1"># Discover our component directories</span>
 <span class="n">_components_path</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;components&quot;</span><span class="p">)</span>
@@ -218,6 +222,49 @@
             <span class="n">username</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;yellow&quot;</span><span class="p">),</span></div>
         <span class="p">),</span>
     <span class="p">)</span>
+
+
+<div class="viewcode-block" id="get_component_graph"><a class="viewcode-back" href="../../autoapi/bin/commands/index.html#bin.commands.get_component_graph">[docs]</a><span class="k">def</span> <span class="nf">get_component_graph</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">DiGraph</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the dependency graph for our components.</span>
+
+<span class="sd">    This reads the ``component.yaml`` file for each component to determine dependencies.</span>
+
+<span class="sd">    :return: The dependency graph.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Create the graph</span>
+    <span class="n">components</span> <span class="o">=</span> <span class="n">DiGraph</span><span class="p">()</span>
+    <span class="n">components</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">Component</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="n">Component</span><span class="p">:</span>
+        <span class="n">component_yaml</span> <span class="o">=</span> <span class="n">get_component_config</span><span class="p">(</span><span class="n">component</span><span class="p">)</span>
+        <span class="n">components</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">Component</span><span class="p">[</span><span class="n">dependency</span><span class="p">],</span> <span class="n">component</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">dependency</span> <span class="ow">in</span> <span class="n">component_yaml</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dependencies&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Confirm that no cycles are present</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">cycles</span> <span class="o">=</span> <span class="n">find_cycle</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">NetworkXNoCycle</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">components</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Cycles found in component dependency graph&quot;</span><span class="p">,</span> <span class="n">cycles</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_component_config"><a class="viewcode-back" href="../../autoapi/bin/commands/index.html#bin.commands.get_component_config">[docs]</a><span class="k">def</span> <span class="nf">get_component_config</span><span class="p">(</span><span class="n">component</span><span class="p">:</span> <span class="n">Component</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read the contents of the component&#39;s component.yaml yaml file.</span>
+
+<span class="sd">    :param component: The component whose component.yaml you wish to retrieve.</span>
+<span class="sd">    :return: The config contents or the empty dictionary if it was not present.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span>
+            <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;components&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="n">component</span><span class="o">.</span><span class="n">value</span> <span class="o">/</span> <span class="s2">&quot;component.yaml&quot;</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">component_yaml_file</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">component_yaml_file</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span></div>
 </pre></div>
 
            </div>

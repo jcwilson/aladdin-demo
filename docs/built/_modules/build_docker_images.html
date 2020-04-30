@@ -159,6 +159,7 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">atexit</span>
 <span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">contextlib</span>
 <span class="kn">import</span> <span class="nn">functools</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">logging</span>
@@ -170,12 +171,12 @@
 <span class="kn">import</span> <span class="nn">tempfile</span>
 <span class="kn">import</span> <span class="nn">textwrap</span>
 <span class="kn">import</span> <span class="nn">typing</span>
-<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
 
 <span class="kn">import</span> <span class="nn">coloredlogs</span>
+<span class="kn">import</span> <span class="nn">networkx</span>
 <span class="kn">import</span> <span class="nn">verboselogs</span>
-<span class="kn">from</span> <span class="nn">networkx</span> <span class="kn">import</span> <span class="n">DiGraph</span>
-<span class="kn">from</span> <span class="nn">networkx.algorithms</span> <span class="kn">import</span> <span class="n">dag</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
 
 
 <div class="viewcode-block" id="Undefined"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.Undefined">[docs]</a><span class="k">class</span> <span class="nc">Undefined</span><span class="p">:</span>
@@ -266,6 +267,7 @@
         <span class="p">[</span>
             <span class="s2">&quot;project&quot;</span><span class="p">,</span>
             <span class="s2">&quot;to_publish&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;component_graph&quot;</span><span class="p">,</span>
             <span class="s2">&quot;component&quot;</span><span class="p">,</span>
             <span class="s2">&quot;config&quot;</span><span class="p">,</span>
             <span class="s2">&quot;hash&quot;</span><span class="p">,</span>
@@ -305,6 +307,10 @@
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">project</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">component</span><span class="si">}</span><span class="s2">:editor&quot;</span></div>
 
     <span class="nd">@property</span>
+<div class="viewcode-block" id="BuildInfo.builder_tag"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.BuildInfo.builder_tag">[docs]</a>    <span class="k">def</span> <span class="nf">builder_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">project</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">component</span><span class="si">}</span><span class="s2">:builder&quot;</span></div>
+
+    <span class="nd">@property</span>
 <div class="viewcode-block" id="BuildInfo.dev"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.BuildInfo.dev">[docs]</a>    <span class="k">def</span> <span class="nf">dev</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hash</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span></div>
 
@@ -317,11 +323,15 @@
         <span class="k">return</span> <span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dev</span> <span class="k">else</span> <span class="s2">&quot;-O&quot;</span></div>
 
     <span class="nd">@property</span>
+<div class="viewcode-block" id="BuildInfo.add_user_to_sudoers"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.BuildInfo.add_user_to_sudoers">[docs]</a>    <span class="k">def</span> <span class="nf">add_user_to_sudoers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dev</span></div>
+
+    <span class="nd">@property</span>
 <div class="viewcode-block" id="BuildInfo.base_image"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.BuildInfo.base_image">[docs]</a>    <span class="k">def</span> <span class="nf">base_image</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">image_base</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">&quot;python:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">language_version</span><span class="si">}</span><span class="s2">-slim&quot;</span></div>
 
     <span class="nd">@property</span>
-<div class="viewcode-block" id="BuildInfo.builder_image"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.BuildInfo.builder_image">[docs]</a>    <span class="k">def</span> <span class="nf">builder_image</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="BuildInfo.builder_base_image"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.BuildInfo.builder_base_image">[docs]</a>    <span class="k">def</span> <span class="nf">builder_base_image</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;python:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_language_version</span><span class="si">}</span><span class="s2">-slim&quot;</span></div>
 
     <span class="nd">@property</span>
@@ -346,30 +356,17 @@
         <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_user_info&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">image_user_info</span><span class="p">)</span></div>
 
     <span class="nd">@property</span>
-<div class="viewcode-block" id="BuildInfo.dependencies"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.BuildInfo.dependencies">[docs]</a>    <span class="k">def</span> <span class="nf">dependencies</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="BuildInfo.dependencies"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.BuildInfo.dependencies">[docs]</a>    <span class="k">def</span> <span class="nf">dependencies</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">typing</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return the topologically sorted list of dependencies required for this component.</span>
+<span class="sd">        The topologically sorted list of dependencies required for this component.</span>
 
 <span class="sd">        This will include the complete hierarchy of dependencies for this component, so it is only</span>
 <span class="sd">        necessary to enumerate a component&#39;s direct dependencies in the component.yaml file.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">components</span> <span class="o">=</span> <span class="n">DiGraph</span><span class="p">()</span>
-        <span class="n">components</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">component</span><span class="p">)</span>
-
-        <span class="n">remaining</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">component</span><span class="p">]</span>
-        <span class="k">while</span> <span class="n">remaining</span><span class="p">:</span>
-            <span class="n">component</span> <span class="o">=</span> <span class="n">remaining</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="n">config</span> <span class="o">=</span> <span class="n">read_component_config</span><span class="p">(</span><span class="n">component</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">dependency</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">dependencies</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">dependency</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
-                    <span class="n">components</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">dependency</span><span class="p">)</span>
-                <span class="n">components</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">dependency</span><span class="p">,</span> <span class="n">component</span><span class="p">)</span>
-
-            <span class="n">remaining</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">dependencies</span><span class="p">)</span>
-
-        <span class="n">topological_order</span> <span class="o">=</span> <span class="n">dag</span><span class="o">.</span><span class="n">topological_sort</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
-        <span class="n">ancestors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">ancestors</span><span class="p">(</span><span class="n">components</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">component</span><span class="p">))</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">component</span> <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="n">topological_order</span> <span class="k">if</span> <span class="n">component</span> <span class="ow">in</span> <span class="n">ancestors</span><span class="p">]</span></div></div>
+        <span class="n">dependencies</span> <span class="o">=</span> <span class="n">networkx</span><span class="o">.</span><span class="n">algorithms</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">ancestors</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">component_graph</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">component</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="n">networkx</span><span class="o">.</span><span class="n">algorithms</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">topological_sort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">component_graph</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">dependencies</span><span class="p">))</span></div></div>
+        <span class="p">)</span>
 
 
 <div class="viewcode-block" id="DockerIgnore"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.DockerIgnore">[docs]</a><span class="k">class</span> <span class="nc">DockerIgnore</span><span class="p">:</span>
@@ -499,7 +496,7 @@
 <div class="viewcode-block" id="build"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.build">[docs]</a><span class="k">def</span> <span class="nf">build</span><span class="p">(</span>
     <span class="n">lamp</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
     <span class="nb">hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">components</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">List</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">components</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">default_python_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;3.8&quot;</span><span class="p">,</span>
     <span class="n">poetry_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1.0.5&quot;</span><span class="p">,</span>
 <span class="p">):</span>
@@ -538,6 +535,9 @@
         <span class="p">)</span>
         <span class="k">return</span>
 
+    <span class="c1"># Check for cycles in the component dependency graph</span>
+    <span class="n">component_graph</span> <span class="o">=</span> <span class="n">validate_component_dependencies</span><span class="p">(</span><span class="n">components</span><span class="o">=</span><span class="n">all_components</span><span class="p">)</span>
+
     <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">notice</span><span class="p">(</span><span class="s2">&quot;Starting build for </span><span class="si">%s</span><span class="s2"> component&quot;</span><span class="p">,</span> <span class="n">component</span><span class="p">)</span>
         <span class="c1"># Read the component.yaml file</span>
@@ -552,6 +552,7 @@
             <span class="n">build_info</span> <span class="o">=</span> <span class="n">BuildInfo</span><span class="p">(</span>
                 <span class="n">project</span><span class="o">=</span><span class="n">lamp</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
                 <span class="n">to_publish</span><span class="o">=</span><span class="n">lamp</span><span class="p">[</span><span class="s2">&quot;docker_images&quot;</span><span class="p">],</span>
+                <span class="n">component_graph</span><span class="o">=</span><span class="n">component_graph</span><span class="p">,</span>
                 <span class="n">component</span><span class="o">=</span><span class="n">component</span><span class="p">,</span>
                 <span class="n">config</span><span class="o">=</span><span class="n">component_config</span><span class="p">,</span>
                 <span class="nb">hash</span><span class="o">=</span><span class="nb">hash</span><span class="p">,</span>
@@ -574,6 +575,31 @@
             <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="s2">&quot;Built images for components: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">components</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="validate_component_dependencies"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.validate_component_dependencies">[docs]</a><span class="k">def</span> <span class="nf">validate_component_dependencies</span><span class="p">(</span><span class="n">components</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">networkx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Confirm that the components&#39; dependency hierarchy has no cycles.</span>
+
+<span class="sd">    :return: The component dependency graph</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Create our component dependency graph</span>
+    <span class="n">component_graph</span> <span class="o">=</span> <span class="n">networkx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+    <span class="n">component_graph</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">read_component_config</span><span class="p">(</span><span class="n">component</span><span class="p">)</span>
+        <span class="n">component_graph</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">dependency</span><span class="p">,</span> <span class="n">component</span><span class="p">)</span> <span class="k">for</span> <span class="n">dependency</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">dependencies</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Check for dependency cycles</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">cycles</span> <span class="o">=</span> <span class="n">networkx</span><span class="o">.</span><span class="n">algorithms</span><span class="o">.</span><span class="n">cycles</span><span class="o">.</span><span class="n">find_cycle</span><span class="p">(</span><span class="n">component_graph</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">networkx</span><span class="o">.</span><span class="n">exception</span><span class="o">.</span><span class="n">NetworkXNoCycle</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">component_graph</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Cycle(s) found in component dependency graph: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">cycles</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">ConfigurationException</span><span class="p">(</span><span class="s2">&quot;Cycle(s) found in component dependency graph&quot;</span><span class="p">,</span> <span class="n">cycles</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="read_component_config"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.read_component_config">[docs]</a><span class="k">def</span> <span class="nf">read_component_config</span><span class="p">(</span><span class="n">component</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ComponentConfig</span><span class="p">:</span>
@@ -605,9 +631,16 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">notice</span><span class="p">(</span><span class="s2">&quot;Building image for component: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">build_info</span><span class="o">.</span><span class="n">component</span><span class="p">)</span>
+
+        <span class="c1"># Determine the python version of the base image</span>
+        <span class="n">build_info</span><span class="o">.</span><span class="n">set_language_version</span><span class="p">(</span><span class="n">get_image_python_version</span><span class="p">(</span><span class="n">build_info</span><span class="p">))</span>
+
         <span class="c1"># Start off by simply tagging our base image</span>
         <span class="c1"># All subsequent steps here will just move the tag to the newly built image</span>
         <span class="n">tag_base_image</span><span class="p">(</span><span class="n">build_info</span><span class="p">)</span>
+
+        <span class="c1"># Create a builder image that can be used across components (rely on Dockerfile caching)</span>
+        <span class="n">build_builder_image</span><span class="p">(</span><span class="n">build_info</span><span class="p">)</span>
 
         <span class="c1"># Opt out by setting image.aladdinize=false or by specifying a base image</span>
         <span class="k">if</span> <span class="n">build_info</span><span class="o">.</span><span class="n">aladdinize</span><span class="p">:</span>
@@ -617,21 +650,16 @@
         <span class="k">if</span> <span class="n">build_info</span><span class="o">.</span><span class="n">specialized_dockerfile</span><span class="p">:</span>
             <span class="n">build_specialized_image</span><span class="p">(</span><span class="n">build_info</span><span class="p">)</span>
 
-        <span class="c1"># Extract some values from the base image for the build info</span>
-        <span class="n">python_version</span><span class="p">,</span> <span class="n">user_info</span> <span class="o">=</span> <span class="n">get_image_details</span><span class="p">(</span><span class="n">build_info</span><span class="p">)</span>
-        <span class="c1"># Set the python version so the builder image can use the same</span>
-        <span class="c1"># python version as the base image</span>
-        <span class="n">build_info</span><span class="o">.</span><span class="n">set_language_version</span><span class="p">(</span><span class="n">python_version</span><span class="p">)</span>
-        <span class="c1"># Set the user info from the image so we can install poetry</span>
-        <span class="c1"># and python libraries in the correct location</span>
-        <span class="n">build_info</span><span class="o">.</span><span class="n">set_user_info</span><span class="p">(</span><span class="n">user_info</span><span class="p">)</span>
+        <span class="c1"># Set the user info from the image so we can install poetry and python libraries</span>
+        <span class="c1"># in the correct location</span>
+        <span class="n">build_info</span><span class="o">.</span><span class="n">set_user_info</span><span class="p">(</span><span class="n">get_image_user_info</span><span class="p">(</span><span class="n">build_info</span><span class="p">))</span>
 
         <span class="c1"># Opt out by setting image.add_poetry=false or by specifying a base image</span>
         <span class="k">if</span> <span class="n">build_info</span><span class="o">.</span><span class="n">add_poetry</span><span class="p">:</span>
             <span class="n">add_poetry</span><span class="p">(</span><span class="n">build_info</span><span class="p">)</span>
 
         <span class="c1"># Add the component dependencies&#39; assets</span>
-        <span class="n">add_dependencies</span><span class="p">(</span><span class="n">build_info</span><span class="p">)</span>
+        <span class="n">add_dependency_components</span><span class="p">(</span><span class="n">build_info</span><span class="p">)</span>
 
         <span class="c1"># Add the component&#39;s assets</span>
         <span class="n">add_component</span><span class="p">(</span><span class="n">build_info</span><span class="p">,</span> <span class="n">build_info</span><span class="o">.</span><span class="n">component</span><span class="p">)</span>
@@ -666,6 +694,23 @@
 
 
 <span class="nd">@dockerignore</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
+<div class="viewcode-block" id="build_builder_image"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.build_builder_image">[docs]</a><span class="k">def</span> <span class="nf">build_builder_image</span><span class="p">(</span><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span><span class="p">,</span> <span class="n">ignore_file</span><span class="p">:</span> <span class="n">DockerIgnore</span><span class="p">):</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Creating builder image for </span><span class="si">%s</span><span class="s2"> component&quot;</span><span class="p">,</span> <span class="n">build_info</span><span class="o">.</span><span class="n">component</span><span class="p">)</span>
+
+    <span class="n">ignore_file</span><span class="o">.</span><span class="n">ignore_all</span><span class="p">()</span>
+    <span class="n">ignore_file</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s2">&quot;pip.conf&quot;</span><span class="p">)</span>
+    <span class="n">ignore_file</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s2">&quot;poetry.toml&quot;</span><span class="p">)</span>
+
+    <span class="n">_docker_build</span><span class="p">(</span>
+        <span class="n">dockerfile</span><span class="o">=</span><span class="s2">&quot;build/python/builder.dockerfile&quot;</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="n">build_info</span><span class="o">.</span><span class="n">builder_tag</span><span class="p">],</span>
+        <span class="n">buildargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+            <span class="n">FROM_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">builder_base_image</span><span class="p">,</span> <span class="n">POETRY_VERSION</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">poetry_version</span></div>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="nd">@dockerignore</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
 <div class="viewcode-block" id="aladdinize_image"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.aladdinize_image">[docs]</a><span class="k">def</span> <span class="nf">aladdinize_image</span><span class="p">(</span><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span><span class="p">,</span> <span class="n">ignore_file</span><span class="p">:</span> <span class="n">DockerIgnore</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Add the aladdin boilerplate.</span>
@@ -684,8 +729,12 @@
 
     <span class="n">_docker_build</span><span class="p">(</span>
         <span class="n">dockerfile</span><span class="o">=</span><span class="s2">&quot;build/python/aladdinize.dockerfile&quot;</span><span class="p">,</span>
-        <span class="n">tag</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
-        <span class="n">buildargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">FROM_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="n">PYTHON_OPTIMIZE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">python_optimize</span><span class="p">),</span></div>
+        <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">],</span>
+        <span class="n">buildargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+            <span class="n">FROM_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
+            <span class="n">PYTHON_OPTIMIZE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">python_optimize</span><span class="p">,</span>
+            <span class="n">ADD_TO_SUDOERS</span><span class="o">=</span><span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="n">build_info</span><span class="o">.</span><span class="n">add_user_to_sudoers</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span><span class="p">,</span></div>
+        <span class="p">),</span>
     <span class="p">)</span>
 
 
@@ -703,15 +752,12 @@
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Adding poetry to </span><span class="si">%s</span><span class="s2"> component&quot;</span><span class="p">,</span> <span class="n">build_info</span><span class="o">.</span><span class="n">component</span><span class="p">)</span>
 
     <span class="n">ignore_file</span><span class="o">.</span><span class="n">ignore_all</span><span class="p">()</span>
-    <span class="n">ignore_file</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s2">&quot;pip.conf&quot;</span><span class="p">)</span>
-    <span class="n">ignore_file</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s2">&quot;poetry.toml&quot;</span><span class="p">)</span>
-    <span class="n">ignore_file</span><span class="o">.</span><span class="n">ignore_defaults</span><span class="p">()</span>
 
     <span class="n">_docker_build</span><span class="p">(</span>
         <span class="n">dockerfile</span><span class="o">=</span><span class="s2">&quot;build/python/add-poetry.dockerfile&quot;</span><span class="p">,</span>
-        <span class="n">tag</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">],</span>
         <span class="n">buildargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
-            <span class="n">BUILDER_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">builder_image</span><span class="p">,</span>
+            <span class="n">BUILDER_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">builder_tag</span><span class="p">,</span>
             <span class="n">FROM_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
             <span class="n">POETRY_VERSION</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">poetry_version</span><span class="p">,</span>
             <span class="n">USER_HOME</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">user_info</span><span class="o">.</span><span class="n">home</span><span class="p">,</span>
@@ -746,32 +792,54 @@
 
     <span class="n">_docker_build</span><span class="p">(</span>
         <span class="n">dockerfile</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">specialized_dockerfile</span><span class="p">,</span>
-        <span class="n">tag</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
-        <span class="n">buildargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">FROM_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="n">PYTHON_OPTIMIZE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">python_optimize</span><span class="p">),</span></div>
+        <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">],</span>
+        <span class="n">buildargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+            <span class="n">BUILDER_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">builder_tag</span><span class="p">,</span>
+            <span class="n">FROM_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
+            <span class="n">PYTHON_OPTIMIZE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">python_optimize</span><span class="p">,</span></div>
+        <span class="p">),</span>
     <span class="p">)</span>
 
 
-<div class="viewcode-block" id="get_image_details"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.get_image_details">[docs]</a><span class="k">def</span> <span class="nf">get_image_details</span><span class="p">(</span><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">UserInfo</span><span class="p">):</span>
+<span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+<div class="viewcode-block" id="extractor_image"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.extractor_image">[docs]</a><span class="k">def</span> <span class="nf">extractor_image</span><span class="p">(</span><span class="n">from_image</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Extract python version and the user, group and home directory of the image&#39;s ``USER``.</span>
+<span class="sd">    Yields a function to receive a string shell command to run in the given image.</span>
 
-<span class="sd">    :param build_info: The build info populated from the config and command line arguments.</span>
-<span class="sd">    :return: The python version string and the user info from the current image.</span>
+<span class="sd">    Use this to run arbitrary shell commands in an image, even if the image has set its</span>
+<span class="sd">    ENTRYPOINT and CMD settinsg. It will run the command in a derived image with those settings</span>
+<span class="sd">    cleared, then delete the image once done.</span>
+
+<span class="sd">    :param from_image: The image to run the command in.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Extracting base image info&quot;</span><span class="p">)</span>
-
     <span class="c1"># Build a temporary image that can be used to pull image data out of the container.</span>
     <span class="c1"># We need to get rid of the ENTRYPOINT and CMD configurations.</span>
+    <span class="n">IMAGE_NAME</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;info_extractor:</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid1</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="si">}</span><span class="s2">&quot;</span>
+
     <span class="n">_docker_build</span><span class="p">(</span>
         <span class="n">dockerfile</span><span class="o">=</span><span class="s2">&quot;build/python/lobotomize.dockerfile&quot;</span><span class="p">,</span>
-        <span class="n">tag</span><span class="o">=</span><span class="s2">&quot;info_extractor&quot;</span><span class="p">,</span>
-        <span class="n">buildargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">FROM_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">),</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="n">IMAGE_NAME</span><span class="p">],</span>
+        <span class="n">buildargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">FROM_IMAGE</span><span class="o">=</span><span class="n">from_image</span><span class="p">),</span>
     <span class="p">)</span>
 
+    <span class="k">def</span> <span class="nf">call_in_lobotomized_image</span><span class="p">(</span><span class="n">shell_command</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Execute a shell command in a container from the lobotomized image.</span>
+
+<span class="sd">        :param shell_command: The command to execute.</span>
+<span class="sd">        :return: The resulting stdout output string.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sp</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="s2">&quot;docker&quot;</span><span class="p">,</span> <span class="s2">&quot;run&quot;</span><span class="p">,</span> <span class="s2">&quot;--rm&quot;</span><span class="p">,</span> <span class="n">IMAGE_NAME</span><span class="p">,</span> <span class="s2">&quot;/bin/sh&quot;</span><span class="p">,</span> <span class="s2">&quot;-c&quot;</span><span class="p">,</span> <span class="n">shell_command</span><span class="p">],</span>
+            <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">sp</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">encoding</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">get_image_python_version</span><span class="p">(</span><span class="n">build_info</span><span class="p">),</span> <span class="n">get_image_user_info</span><span class="p">(</span><span class="n">build_info</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">call_in_lobotomized_image</span>
     <span class="k">finally</span><span class="p">:</span>
-        <span class="n">_check_call</span><span class="p">([</span><span class="s2">&quot;docker&quot;</span><span class="p">,</span> <span class="s2">&quot;rmi&quot;</span><span class="p">,</span> <span class="s2">&quot;info_extractor&quot;</span><span class="p">])</span></div>
+        <span class="n">_check_call</span><span class="p">([</span><span class="s2">&quot;docker&quot;</span><span class="p">,</span> <span class="s2">&quot;rmi&quot;</span><span class="p">,</span> <span class="n">IMAGE_NAME</span><span class="p">])</span></div>
 
 
 <div class="viewcode-block" id="get_image_python_version"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.get_image_python_version">[docs]</a><span class="k">def</span> <span class="nf">get_image_python_version</span><span class="p">(</span><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -787,9 +855,11 @@
         <span class="k">return</span> <span class="n">build_info</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">language_version</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">python_version</span> <span class="o">=</span> <span class="n">_call_in_lobotomized_image</span><span class="p">(</span>
-            <span class="s2">&quot;python -c &#39;import platform; print(platform.python_version())&#39;&quot;</span>
-        <span class="p">)</span>
+        <span class="k">with</span> <span class="n">extractor_image</span><span class="p">(</span><span class="n">from_image</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">base_image</span><span class="p">)</span> <span class="k">as</span> <span class="n">call_in_extractor</span><span class="p">:</span>
+            <span class="n">python_version</span> <span class="o">=</span> <span class="n">call_in_extractor</span><span class="p">(</span>
+                <span class="s2">&quot;python -c &#39;import platform; print(platform.python_version())&#39;&quot;</span>
+            <span class="p">)</span>
+
         <span class="k">assert</span> <span class="p">(</span>
             <span class="n">python_version</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
         <span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;Unexpected python version string: </span><span class="si">{</span><span class="n">retrieved_version</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -813,9 +883,11 @@
         <span class="k">return</span> <span class="n">build_info</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">image_user_info</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">user_name</span><span class="p">,</span> <span class="n">user_groups</span><span class="p">,</span> <span class="n">user_home</span> <span class="o">=</span> <span class="n">_call_in_lobotomized_image</span><span class="p">(</span>
-            <span class="s2">&quot;whoami; groups; echo $HOME&quot;</span>
-        <span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">extractor_image</span><span class="p">(</span><span class="n">from_image</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span> <span class="k">as</span> <span class="n">call_in_extractor</span><span class="p">:</span>
+            <span class="n">user_name</span><span class="p">,</span> <span class="n">user_groups</span><span class="p">,</span> <span class="n">user_home</span> <span class="o">=</span> <span class="n">call_in_extractor</span><span class="p">(</span>
+                <span class="s2">&quot;whoami; groups; echo $HOME&quot;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
         <span class="n">user_groups</span> <span class="o">=</span> <span class="n">user_groups</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
         <span class="n">user_info</span> <span class="o">=</span> <span class="n">UserInfo</span><span class="p">(</span>
             <span class="n">name</span><span class="o">=</span><span class="n">user_name</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="n">user_groups</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">user_groups</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span> <span class="n">home</span><span class="o">=</span><span class="n">user_home</span>
@@ -828,22 +900,7 @@
         <span class="k">raise</span> <span class="n">ConfigurationException</span><span class="p">(</span><span class="s2">&quot;You must provide image.user_info in component.yaml&quot;</span><span class="p">)</span></div>
 
 
-<span class="k">def</span> <span class="nf">_call_in_lobotomized_image</span><span class="p">(</span><span class="n">shell_command</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Execute a shell command in a container from the lobotomized image.</span>
-
-<span class="sd">    :param shell_command: The command to execute.</span>
-<span class="sd">    :return: The resulting stdout output string.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">sp</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-        <span class="p">[</span><span class="s2">&quot;docker&quot;</span><span class="p">,</span> <span class="s2">&quot;run&quot;</span><span class="p">,</span> <span class="s2">&quot;--rm&quot;</span><span class="p">,</span> <span class="s2">&quot;info_extractor&quot;</span><span class="p">,</span> <span class="s2">&quot;/bin/sh&quot;</span><span class="p">,</span> <span class="s2">&quot;-c&quot;</span><span class="p">,</span> <span class="n">shell_command</span><span class="p">],</span>
-        <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="k">return</span> <span class="n">sp</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">encoding</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-
-
-<div class="viewcode-block" id="add_dependencies"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.add_dependencies">[docs]</a><span class="k">def</span> <span class="nf">add_dependencies</span><span class="p">(</span><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span><span class="p">):</span>
+<div class="viewcode-block" id="add_dependency_components"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.add_dependency_components">[docs]</a><span class="k">def</span> <span class="nf">add_dependency_components</span><span class="p">(</span><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Add all of the components&#39; dependencies to the image.</span>
 
@@ -866,6 +923,12 @@
 <div class="viewcode-block" id="add_component"><a class="viewcode-back" href="../autoapi/build_docker_images/index.html#build_docker_images.add_component">[docs]</a><span class="k">def</span> <span class="nf">add_component</span><span class="p">(</span><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span><span class="p">,</span> <span class="n">component</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Add a component&#39;s poetry-managed libraries and the component&#39;s own assets to the image.</span>
+
+<span class="sd">    If ``component`` is the component whose image is currently being built and it appears to be</span>
+<span class="sd">    using poetry to define its project, it will also be ``poetry installed`` in the image. This is</span>
+<span class="sd">    to account for any components that define commands under ``[tool.poetry.scripts]`` in their</span>
+<span class="sd">    ``pyproject.toml`` file. Those commands will be available in the container as first-class</span>
+<span class="sd">    command line commands.</span>
 
 <span class="sd">    :param build_info: The build info populated from the config and command line arguments.</span>
 <span class="sd">    :param component: The component to add to the image.</span>
@@ -910,9 +973,9 @@
     <span class="c1"># Build the poetry dependencies</span>
     <span class="n">_docker_build</span><span class="p">(</span>
         <span class="n">dockerfile</span><span class="o">=</span><span class="s2">&quot;build/python/add-component-python-dependencies.dockerfile&quot;</span><span class="p">,</span>
-        <span class="n">tag</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">],</span>
         <span class="n">buildargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
-            <span class="n">BUILDER_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">builder_image</span><span class="p">,</span>
+            <span class="n">BUILDER_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">builder_tag</span><span class="p">,</span>
             <span class="n">FROM_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
             <span class="n">COMPONENT</span><span class="o">=</span><span class="n">component</span><span class="p">,</span>
             <span class="n">POETRY_VERSION</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">poetry_version</span><span class="p">,</span>
@@ -957,7 +1020,7 @@
     <span class="c1"># Copy the built poetry dependencies and the component code into the target image</span>
     <span class="n">_docker_build</span><span class="p">(</span>
         <span class="n">dockerfile</span><span class="o">=</span><span class="s2">&quot;build/python/add-component-content.dockerfile&quot;</span><span class="p">,</span>
-        <span class="n">tag</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">],</span>
         <span class="n">buildargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
             <span class="n">FROM_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
             <span class="n">COMPONENT</span><span class="o">=</span><span class="n">component</span><span class="p">,</span>
@@ -982,52 +1045,53 @@
 
     <span class="n">_docker_build</span><span class="p">(</span>
         <span class="n">dockerfile</span><span class="o">=</span><span class="s2">&quot;build/python/lobotomize.dockerfile&quot;</span><span class="p">,</span>
-        <span class="n">tag</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">editor_tag</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="n">build_info</span><span class="o">.</span><span class="n">editor_tag</span><span class="p">],</span>
         <span class="n">buildargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">FROM_IMAGE</span><span class="o">=</span><span class="n">build_info</span><span class="o">.</span><span class="n">tag</span><span class="p">),</span></div>
     <span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_docker_build</span><span class="p">(</span><span class="n">dockerfile</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">buildargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_docker_build</span><span class="p">(</span><span class="n">dockerfile</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tags</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">buildargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A convenience wrapper for calling out to &quot;docker build&quot;.</span>
 
 <span class="sd">    We always send the same context: the components/ directory.</span>
 
 <span class="sd">    :param dockerfile: The dockerfile to build against.</span>
-<span class="sd">    :param tag: The tag to be applied to the built image.</span>
+<span class="sd">    :param tags: The tags to be applied to the built image.</span>
 <span class="sd">    :param buildargs: Values for ARG instructions in the dockerfile.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">buildargs</span> <span class="o">=</span> <span class="n">buildargs</span> <span class="ow">or</span> <span class="p">{}</span>
 
+    <span class="k">assert</span> <span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;At least one tag is required&quot;</span>
+
     <span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;docker&quot;</span><span class="p">,</span> <span class="s2">&quot;build&quot;</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">buildargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;--build-arg&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>
-    <span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;--tag&quot;</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="s2">&quot;-f&quot;</span><span class="p">,</span> <span class="n">dockerfile</span><span class="p">,</span> <span class="s2">&quot;components&quot;</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+        <span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;--tag&quot;</span><span class="p">,</span> <span class="n">tag</span><span class="p">])</span>
+    <span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-f&quot;</span><span class="p">,</span> <span class="n">dockerfile</span><span class="p">,</span> <span class="s2">&quot;components&quot;</span><span class="p">])</span>
 
     <span class="c1"># Log the build command in a more readable format</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-        <span class="s2">&quot;docker build --tag </span><span class="si">%s</span><span class="s2"> -f </span><span class="si">%s</span><span class="s2"> components&quot;</span>
+        <span class="s2">&quot;docker build </span><span class="si">%s</span><span class="s2"> -f </span><span class="si">%s</span><span class="s2"> components&quot;</span>
         <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="o">+</span> <span class="n">textwrap</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span>
             <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">buildargs</span><span class="o">.</span><span class="n">items</span><span class="p">())),</span> <span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="mi">13</span>
         <span class="p">)</span>
         <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span>
-        <span class="n">tag</span><span class="p">,</span>
+        <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;--tag </span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">),</span>
         <span class="n">dockerfile</span><span class="p">,</span>
     <span class="p">)</span>
 
     <span class="c1"># Log the .dockerignore file contents used for the build</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;components&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;.dockerignore&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">ignore_file</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s2">&quot;.dockerignore file:</span><span class="se">\n</span><span class="s2">         ================================</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
-            <span class="n">textwrap</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span><span class="n">ignore_file</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span> <span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="mi">9</span><span class="p">),</span>
-        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;.dockerignore file:</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">textwrap</span><span class="o">.</span><span class="n">indent</span><span class="p">(</span><span class="n">ignore_file</span><span class="o">.</span><span class="n">read</span><span class="p">(),</span> <span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="mi">9</span><span class="p">))</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Docker build output:&quot;</span><span class="p">)</span>
     <span class="n">_check_call</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">_check_call</span><span class="p">(</span><span class="n">cmd</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">_check_call</span><span class="p">(</span><span class="n">cmd</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Make a subprocess call and indent its output to match our python logging format.</span>
 

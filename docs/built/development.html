@@ -198,8 +198,8 @@
 <h1>Development<a class="headerlink" href="#development" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="using-poetry">
 <h2>Using poetry<a class="headerlink" href="#using-poetry" title="Permalink to this headline">¶</a></h2>
-<p>This project uses <a class="reference external" href="https://python-poetry.org/">poetry</a> as its package manager and build system. It offers support for deterministic installation of dependencies by utilizing a lock file as well as other useful features to assist application and library development. All of the project-level operations take place in a python virtual environment that poetry automatically creates and maintains for us.</p>
-<p>While most operations take place inside of docker containers or in a kubernetes cluster, there are still some things that need to run directly from the development machine. We use <a class="reference external" href="https://python-poetry.org/docs/pyproject/#scripts">poetry scripts</a> to manage those operations.</p>
+<p>This project uses <a class="reference external" href="https://python-poetry.org/">poetry</a> as its package manager and build system. It offers support for deterministic installation of dependencies by utilizing a lock file as well as other useful features to assist application and library development.</p>
+<p>While most development operations take place inside of docker containers or in a kubernetes cluster, there are still some things that need to run directly from the development machine. We use <a class="reference external" href="https://python-poetry.org/docs/pyproject/#scripts">poetry scripts</a> to manage those operations. All of the project-level operations take place in a python virtual environment that poetry automatically creates and maintains for us. See the <a class="reference internal" href="#project-scripts"><span class="std std-ref">Project scripts</span></a> section below for more information.</p>
 <div class="section" id="getting-started">
 <h3>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h3>
 <p>The first thing you’ll want to do is create a virtual environment and install this project (and implicitly all of its dependencies).</p>
@@ -254,7 +254,7 @@ Commands:
 <h2>Developing components<a class="headerlink" href="#developing-components" title="Permalink to this headline">¶</a></h2>
 <p>A component is simply a collection of assets (code, binaries, images, etc) that you wish to publish as a docker image. These images can be used for any purpose including:</p>
 <ul class="simple">
-<li><p>a pod container image in a kubernetes deployment</p></li>
+<li><p>a pod container image to be used a kubernetes deployment</p></li>
 <li><p>local instantiation for CI purposes</p></li>
 <li><p>a building block to be included in another component’s image</p></li>
 </ul>
@@ -291,14 +291,14 @@ $ components build --help
 </div>
 <p>If you provide none of the files listed above, your component image will still be built and contain the contents of your component directory. It will just have the “aladdinized” version of the base image for your language. (Currently only python3 is supported). This means the following changes will be made to the base image:</p>
 <ul class="simple">
-<li><p>The python system libraries will be pre-compiled with the appropriate optimizaton level for the build context (unoptized for dev, <code class="docutils literal notranslate"><span class="pre">-O</span></code> otherwise)</p></li>
+<li><p>The python system libraries will be pre-compiled with the appropriate optimizaton level for the build context (unoptimized for dev, <code class="docutils literal notranslate"><span class="pre">-O</span></code> otherwise)</p></li>
 <li><p>The working directory will be set to <code class="docutils literal notranslate"><span class="pre">/code</span></code> and <code class="docutils literal notranslate"><span class="pre">/code</span></code> will be added to the <code class="docutils literal notranslate"><span class="pre">PYTHONPATH</span></code></p></li>
 <li><p>The <code class="docutils literal notranslate"><span class="pre">aladdin-user</span></code> will be created in the <code class="docutils literal notranslate"><span class="pre">aladdin-user</span></code> group, along with its home directory</p></li>
-<li><p>The <code class="docutils literal notranslate"><span class="pre">poetry</span></code> tool will be installed and available to the <code class="docutils literal notranslate"><span class="pre">aladdin-user</span></code></p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">poetry</span></code> tool will be installed and available to <code class="docutils literal notranslate"><span class="pre">aladdin-user</span></code></p></li>
 </ul>
 <div class="section" id="the-dockerignore-file">
 <h4>The <code class="docutils literal notranslate"><span class="pre">.dockerignore</span></code> file<a class="headerlink" href="#the-dockerignore-file" title="Permalink to this headline">¶</a></h4>
-<p>Each component can define its own <code class="docutils literal notranslate"><span class="pre">.dockerignore</span></code> file that will be appended to the <code class="docutils literal notranslate"><span class="pre">components/.dockerignore</span></code>. Any entries in here should be relative to the component’s directory, as the build system will provide the build context-relative prefix automatically.</p>
+<p>Each component can define its own <code class="docutils literal notranslate"><span class="pre">.dockerignore</span></code> file that will be appended to the global <code class="docutils literal notranslate"><span class="pre">components/.dockerignore</span></code>. Any entries in here should be relative to the component’s directory, as the build system will provide the build context-relative prefix automatically.</p>
 </div>
 <div class="section" id="the-dockerfile">
 <h4>The <code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code><a class="headerlink" href="#the-dockerfile" title="Permalink to this headline">¶</a></h4>
@@ -499,7 +499,7 @@ $ components build --help
 </div>
 <div class="section" id="run-a-component">
 <h3>Run a component<a class="headerlink" href="#run-a-component" title="Permalink to this headline">¶</a></h3>
-<p>For quick tests or debugging, you maybe be able to run your component with a direct <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">run</span></code> invocation. Presuming your image does not use the “exec form” for its <code class="docutils literal notranslate"><span class="pre">ENTRYPOINT</span></code> and you are able to run arbitrary commands against it, you can run your component image. By default, it will mount the <code class="docutils literal notranslate"><span class="pre">components</span></code> directory at <code class="docutils literal notranslate"><span class="pre">/code</span></code> in the container.</p>
+<p>For quick tests or debugging, you may be able to run your component with a direct <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">run</span></code> invocation. Presuming your image does not use the “exec form” for its <code class="docutils literal notranslate"><span class="pre">ENTRYPOINT</span></code> and you are able to run arbitrary commands against it, you can run your component image. By default, it will mount the <code class="docutils literal notranslate"><span class="pre">components</span></code> directory at <code class="docutils literal notranslate"><span class="pre">/code</span></code> in the container.</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ components run &lt;component&gt; <span class="o">[</span>command<span class="o">]</span>...
 </pre></div>
 </div>
@@ -549,7 +549,7 @@ $ docs build --help
 </div>
 <div class="section" id="project-documentation">
 <h4>Project documentation<a class="headerlink" href="#project-documentation" title="Permalink to this headline">¶</a></h4>
-<p>You can find the source files in the <code class="docutils literal notranslate"><span class="pre">docs/</span></code> directory.</p>
+<p>You can find the source files in the <code class="docutils literal notranslate"><span class="pre">docs/source</span></code> directory.</p>
 </div>
 </div>
 <div class="section" id="build-the-docs">
@@ -558,12 +558,11 @@ $ docs build --help
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ docs build <span class="o">[</span>--show<span class="o">]</span>
 </pre></div>
 </div>
-<p>You can specify <code class="docutils literal notranslate"><span class="pre">--show</span></code> to open them in your browser after they are built.</p>
+<p>Specify <code class="docutils literal notranslate"><span class="pre">--show</span></code> to open them in your browser after they are built.</p>
 <p>To show the docs without building them again, run:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ docs show
 </pre></div>
 </div>
-<p>We should consider adding the generated docs to source control, as well.</p>
 </div>
 </div>
 </div>

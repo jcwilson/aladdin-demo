@@ -550,7 +550,7 @@ def build_builder_image(build_info: BuildInfo, ignore_file: DockerIgnore):
 
     _docker_build(
         dockerfile="build/python/builder.dockerfile",
-        tag=build_info.builder_tag,
+        tags=[build_info.builder_tag],
         buildargs=dict(
             FROM_IMAGE=build_info.builder_base_image, POETRY_VERSION=build_info.poetry_version
         ),
@@ -576,7 +576,7 @@ def aladdinize_image(build_info: BuildInfo, ignore_file: DockerIgnore):
 
     _docker_build(
         dockerfile="build/python/aladdinize.dockerfile",
-        tag=build_info.tag,
+        tags=[build_info.tag],
         buildargs=dict(
             FROM_IMAGE=build_info.tag,
             PYTHON_OPTIMIZE=build_info.python_optimize,
@@ -602,7 +602,7 @@ def add_poetry(build_info: BuildInfo, ignore_file: DockerIgnore):
 
     _docker_build(
         dockerfile="build/python/add-poetry.dockerfile",
-        tag=build_info.tag,
+        tags=[build_info.tag],
         buildargs=dict(
             BUILDER_IMAGE=build_info.builder_tag,
             FROM_IMAGE=build_info.tag,
@@ -639,7 +639,7 @@ def build_specialized_image(build_info: BuildInfo, ignore_file: DockerIgnore):
 
     _docker_build(
         dockerfile=build_info.specialized_dockerfile,
-        tag=build_info.tag,
+        tags=[build_info.tag],
         buildargs=dict(
             BUILDER_IMAGE=build_info.builder_tag,
             FROM_IMAGE=build_info.tag,
@@ -665,7 +665,7 @@ def extractor_image(from_image: str):
 
     _docker_build(
         dockerfile="build/python/lobotomize.dockerfile",
-        tag=IMAGE_NAME,
+        tags=[IMAGE_NAME],
         buildargs=dict(FROM_IMAGE=from_image),
     )
 
@@ -820,7 +820,7 @@ def add_component_python_packages(build_info: BuildInfo, component: str, ignore_
     # Build the poetry dependencies
     _docker_build(
         dockerfile="build/python/add-component-python-dependencies.dockerfile",
-        tag=build_info.tag,
+        tags=[build_info.tag],
         buildargs=dict(
             BUILDER_IMAGE=build_info.builder_tag,
             FROM_IMAGE=build_info.tag,
@@ -867,7 +867,7 @@ def add_component_content(
     # Copy the built poetry dependencies and the component code into the target image
     _docker_build(
         dockerfile="build/python/add-component-content.dockerfile",
-        tag=build_info.tag,
+        tags=[build_info.tag],
         buildargs=dict(
             FROM_IMAGE=build_info.tag,
             COMPONENT=component,
@@ -892,46 +892,47 @@ def build_editor_image(build_info: BuildInfo, ignore_file: DockerIgnore):
 
     _docker_build(
         dockerfile="build/python/lobotomize.dockerfile",
-        tag=build_info.editor_tag,
+        tags=[build_info.editor_tag],
         buildargs=dict(FROM_IMAGE=build_info.tag),
     )
 
 
-def _docker_build(dockerfile: str, tag: str, buildargs: dict = None):
+def _docker_build(dockerfile: str, tags: typing.List[str], buildargs: dict = None):
     """
     A convenience wrapper for calling out to "docker build".
 
     We always send the same context: the components/ directory.
 
     :param dockerfile: The dockerfile to build against.
-    :param tag: The tag to be applied to the built image.
+    :param tags: The tags to be applied to the built image.
     :param buildargs: Values for ARG instructions in the dockerfile.
     """
     buildargs = buildargs or {}
 
+    assert tags, "At least one tag is required"
+
     cmd = ["docker", "build"]
     for key, value in buildargs.items():
         cmd.extend(["--build-arg", f"{key}={value}"])
-    cmd.extend(["--tag", tag, "-f", dockerfile, "components"])
+    for tag in tags:
+        cmd.extend(["--tag", tag])
+    cmd.extend(["-f", dockerfile, "components"])
 
     # Log the build command in a more readable format
     logger.debug(
-        "docker build --tag %s -f %s components"
+        "docker build %s -f %s components"
         + "\n"
         + textwrap.indent(
             "\n".join(f"{key}={value}" for key, value in sorted(buildargs.items())), " " * 13
         )
         + "\n",
-        tag,
+        " ".join(f"--tag {tag}" for tag in tags),
         dockerfile,
     )
 
     # Log the .dockerignore file contents used for the build
     with open(pathlib.Path("components") / ".dockerignore") as ignore_file:
-        logger.debug(
-            ".dockerignore file:\n         ================================\n%s",
-            textwrap.indent(ignore_file.read(), " " * 9),
-        )
+        logger.debug(".dockerignore file:\n%s", textwrap.indent(ignore_file.read(), " " * 9))
 
     logger.debug("Docker build output:")
     _check_call(cmd)

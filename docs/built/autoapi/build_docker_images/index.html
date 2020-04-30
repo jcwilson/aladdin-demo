@@ -123,6 +123,9 @@
 <li class="toctree-l4"><a class="reference internal" href="#build_docker_images.build">build</a></li>
 </ul>
 <ul>
+<li class="toctree-l4"><a class="reference internal" href="#build_docker_images.validate_component_dependencies">validate_component_dependencies</a></li>
+</ul>
+<ul>
 <li class="toctree-l4"><a class="reference internal" href="#build_docker_images.read_component_config">read_component_config</a></li>
 </ul>
 <ul>
@@ -130,6 +133,9 @@
 </ul>
 <ul>
 <li class="toctree-l4"><a class="reference internal" href="#build_docker_images.tag_base_image">tag_base_image</a></li>
+</ul>
+<ul>
+<li class="toctree-l4"><a class="reference internal" href="#build_docker_images.build_builder_image">build_builder_image</a></li>
 </ul>
 <ul>
 <li class="toctree-l4"><a class="reference internal" href="#build_docker_images.aladdinize_image">aladdinize_image</a></li>
@@ -141,7 +147,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#build_docker_images.build_specialized_image">build_specialized_image</a></li>
 </ul>
 <ul>
-<li class="toctree-l4"><a class="reference internal" href="#build_docker_images.get_image_details">get_image_details</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#build_docker_images.extractor_image">extractor_image</a></li>
 </ul>
 <ul>
 <li class="toctree-l4"><a class="reference internal" href="#build_docker_images.get_image_python_version">get_image_python_version</a></li>
@@ -150,7 +156,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#build_docker_images.get_image_user_info">get_image_user_info</a></li>
 </ul>
 <ul>
-<li class="toctree-l4"><a class="reference internal" href="#build_docker_images.add_dependencies">add_dependencies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#build_docker_images.add_dependency_components">add_dependency_components</a></li>
 </ul>
 <ul>
 <li class="toctree-l4"><a class="reference internal" href="#build_docker_images.add_component">add_component</a></li>
@@ -390,6 +396,11 @@ accessing the config.</p>
 <dd></dd></dl>
 
 <dl class="py method">
+<dt id="build_docker_images.BuildInfo.builder_tag">
+<em class="property">property </em><code class="sig-name descname">builder_tag</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#BuildInfo.builder_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.BuildInfo.builder_tag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="build_docker_images.BuildInfo.dev">
 <em class="property">property </em><code class="sig-name descname">dev</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#BuildInfo.dev"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.BuildInfo.dev" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -405,13 +416,18 @@ accessing the config.</p>
 <dd></dd></dl>
 
 <dl class="py method">
+<dt id="build_docker_images.BuildInfo.add_user_to_sudoers">
+<em class="property">property </em><code class="sig-name descname">add_user_to_sudoers</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#BuildInfo.add_user_to_sudoers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.BuildInfo.add_user_to_sudoers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="build_docker_images.BuildInfo.base_image">
 <em class="property">property </em><code class="sig-name descname">base_image</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#BuildInfo.base_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.BuildInfo.base_image" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="build_docker_images.BuildInfo.builder_image">
-<em class="property">property </em><code class="sig-name descname">builder_image</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#BuildInfo.builder_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.BuildInfo.builder_image" title="Permalink to this definition">¶</a></dt>
+<dt id="build_docker_images.BuildInfo.builder_base_image">
+<em class="property">property </em><code class="sig-name descname">builder_base_image</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#BuildInfo.builder_base_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.BuildInfo.builder_base_image" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -437,7 +453,7 @@ accessing the config.</p>
 <dl class="py method">
 <dt id="build_docker_images.BuildInfo.dependencies">
 <em class="property">property </em><code class="sig-name descname">dependencies</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">self</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#BuildInfo.dependencies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.BuildInfo.dependencies" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return the topologically sorted list of dependencies required for this component.</p>
+<dd><p>The topologically sorted list of dependencies required for this component.</p>
 <p>This will include the complete hierarchy of dependencies for this component, so it is only
 necessary to enumerate a component’s direct dependencies in the component.yaml file.</p>
 </dd></dl>
@@ -539,7 +555,7 @@ wrapping the already opened file.</p>
 
 <dl class="py function">
 <dt id="build_docker_images.build">
-<code class="sig-name descname">build</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">lamp</span><span class="p">:</span> <span class="n">dict</span></em>, <em class="sig-param"><span class="n">hash</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">components</span><span class="p">:</span> <span class="n">typing.List</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">default_python_version</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">'3.8'</span></em>, <em class="sig-param"><span class="n">poetry_version</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">'1.0.5'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.build" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">build</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">lamp</span><span class="p">:</span> <span class="n">dict</span></em>, <em class="sig-param"><span class="n">hash</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">components</span><span class="p">:</span> <span class="n">typing.List<span class="p">[</span>str<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">default_python_version</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">'3.8'</span></em>, <em class="sig-param"><span class="n">poetry_version</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">'1.0.5'</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#build"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.build" title="Permalink to this definition">¶</a></dt>
 <dd><p>Build each component for the project.</p>
 <p>If components is empty, this will assume each directory in the components/ directory is a
 component and will build each of them.</p>
@@ -554,6 +570,17 @@ the component’s <code class="docutils literal notranslate"><span class="pre">c
 <li><p><strong>poetry_version</strong> – The version of poetry to install in the component images, defaults to
 <code class="docutils literal notranslate"><span class="pre">&quot;1.0.5&quot;</span></code>.</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="build_docker_images.validate_component_dependencies">
+<code class="sig-name descname">validate_component_dependencies</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">components</span><span class="p">:</span> <span class="n">typing.List<span class="p">[</span>str<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; networkx.DiGraph<a class="reference internal" href="../../_modules/build_docker_images.html#validate_component_dependencies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.validate_component_dependencies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Confirm that the components’ dependency hierarchy has no cycles.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The component dependency graph</p>
 </dd>
 </dl>
 </dd></dl>
@@ -601,6 +628,11 @@ the <code class="docutils literal notranslate"><span class="pre">component.yaml<
 </dd>
 </dl>
 </dd></dl>
+
+<dl class="py function">
+<dt id="build_docker_images.build_builder_image">
+<code class="sig-name descname">build_builder_image</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span></em>, <em class="sig-param"><span class="n">ignore_file</span><span class="p">:</span> <span class="n">DockerIgnore</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#build_builder_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.build_builder_image" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py function">
 <dt id="build_docker_images.aladdinize_image">
@@ -653,15 +685,15 @@ directory, minus the .dockerignore items, of course.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt id="build_docker_images.get_image_details">
-<code class="sig-name descname">get_image_details</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#get_image_details"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.get_image_details" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extract python version and the user, group and home directory of the image’s <code class="docutils literal notranslate"><span class="pre">USER</span></code>.</p>
+<dt id="build_docker_images.extractor_image">
+<code class="sig-name descname">extractor_image</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">from_image</span><span class="p">:</span> <span class="n">str</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#extractor_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.extractor_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Yields a function to receive a string shell command to run in the given image.</p>
+<p>Use this to run arbitrary shell commands in an image, even if the image has set its
+ENTRYPOINT and CMD settinsg. It will run the command in a derived image with those settings
+cleared, then delete the image once done.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>build_info</strong> – The build info populated from the config and command line arguments.</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>The python version string and the user info from the current image.</p>
+<dd class="field-odd"><p><strong>from_image</strong> – The image to run the command in.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -695,8 +727,8 @@ directory, minus the .dockerignore items, of course.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt id="build_docker_images.add_dependencies">
-<code class="sig-name descname">add_dependencies</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#add_dependencies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.add_dependencies" title="Permalink to this definition">¶</a></dt>
+<dt id="build_docker_images.add_dependency_components">
+<code class="sig-name descname">add_dependency_components</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#add_dependency_components"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.add_dependency_components" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add all of the components’ dependencies to the image.</p>
 <p>This will iterate recursively over all of the dependencies found in the component’s
 component.yaml and copy in the dependencies’ poetry-managed libraries as well as the
@@ -712,6 +744,11 @@ dependencies’ code itself.</p>
 <dt id="build_docker_images.add_component">
 <code class="sig-name descname">add_component</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">build_info</span><span class="p">:</span> <span class="n">BuildInfo</span></em>, <em class="sig-param"><span class="n">component</span><span class="p">:</span> <span class="n">str</span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/build_docker_images.html#add_component"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#build_docker_images.add_component" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a component’s poetry-managed libraries and the component’s own assets to the image.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">component</span></code> is the component whose image is currently being built and it appears to be
+using poetry to define its project, it will also be <code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">installed</span></code> in the image. This is
+to account for any components that define commands under <code class="docutils literal notranslate"><span class="pre">[tool.poetry.scripts]</span></code> in their
+<code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> file. Those commands will be available in the container as first-class
+command line commands.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">

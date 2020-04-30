@@ -164,7 +164,7 @@ def build(components: List[Component] = typer.Argument(None)):
     """
     Build the docker images for the project's components.
 
-    This will also perform validation on the component before attempting the build, too.
+    This will also perform validation on the components before attempting the build, too.
     \f
 
     .. note::

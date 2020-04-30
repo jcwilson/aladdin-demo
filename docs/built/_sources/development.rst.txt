@@ -5,9 +5,9 @@ Development
 ************
 Using poetry
 ************
-This project uses poetry_ as its package manager and build system. It offers support for deterministic installation of dependencies by utilizing a lock file as well as other useful features to assist application and library development. All of the project-level operations take place in a python virtual environment that poetry automatically creates and maintains for us.
+This project uses poetry_ as its package manager and build system. It offers support for deterministic installation of dependencies by utilizing a lock file as well as other useful features to assist application and library development.
 
-While most operations take place inside of docker containers or in a kubernetes cluster, there are still some things that need to run directly from the development machine. We use `poetry scripts`_ to manage those operations.
+While most development operations take place inside of docker containers or in a kubernetes cluster, there are still some things that need to run directly from the development machine. We use `poetry scripts`_ to manage those operations. All of the project-level operations take place in a python virtual environment that poetry automatically creates and maintains for us. See the :ref:`development:Project scripts` section below for more information.
 
 .. _poetry: https://python-poetry.org/
 .. _poetry scripts: https://python-poetry.org/docs/pyproject/#scripts
@@ -76,7 +76,7 @@ Developing components
 *********************
 A component is simply a collection of assets (code, binaries, images, etc) that you wish to publish as a docker image. These images can be used for any purpose including:
 
-- a pod container image in a kubernetes deployment
+- a pod container image to be used a kubernetes deployment
 - local instantiation for CI purposes
 - a building block to be included in another component's image
 
@@ -118,15 +118,15 @@ All components live in the ``components/`` directory. All files are optional. Se
 
 If you provide none of the files listed above, your component image will still be built and contain the contents of your component directory. It will just have the "aladdinized" version of the base image for your language. (Currently only python3 is supported). This means the following changes will be made to the base image:
 
-- The python system libraries will be pre-compiled with the appropriate optimizaton level for the build context (unoptized for dev, ``-O`` otherwise)
+- The python system libraries will be pre-compiled with the appropriate optimizaton level for the build context (unoptimized for dev, ``-O`` otherwise)
 - The working directory will be set to ``/code`` and ``/code`` will be added to the ``PYTHONPATH``
 - The ``aladdin-user`` will be created in the ``aladdin-user`` group, along with its home directory
-- The ``poetry`` tool will be installed and available to the ``aladdin-user``
+- The ``poetry`` tool will be installed and available to ``aladdin-user``
 
 
 The ``.dockerignore`` file
 --------------------------
-Each component can define its own ``.dockerignore`` file that will be appended to the ``components/.dockerignore``. Any entries in here should be relative to the component's directory, as the build system will provide the build context-relative prefix automatically.
+Each component can define its own ``.dockerignore`` file that will be appended to the global ``components/.dockerignore``. Any entries in here should be relative to the component's directory, as the build system will provide the build context-relative prefix automatically.
 
 
 The ``Dockerfile``
@@ -206,7 +206,7 @@ Once the component is built, it's ready for use. You should now be able to refer
 
 Run a component
 ===============
-For quick tests or debugging, you maybe be able to run your component with a direct ``docker run`` invocation. Presuming your image does not use the "exec form" for its ``ENTRYPOINT`` and you are able to run arbitrary commands against it, you can run your component image. By default, it will mount the ``components`` directory at ``/code`` in the container.
+For quick tests or debugging, you may be able to run your component with a direct ``docker run`` invocation. Presuming your image does not use the "exec form" for its ``ENTRYPOINT`` and you are able to run arbitrary commands against it, you can run your component image. By default, it will mount the ``components`` directory at ``/code`` in the container.
 
 .. code-block:: shell
 
@@ -274,7 +274,7 @@ We use the Sphinx autoapi_ extension to discover and generate documentation from
 
 Project documentation
 ---------------------
-You can find the source files in the ``docs/`` directory.
+You can find the source files in the ``docs/source`` directory.
 
 
 Build the docs
@@ -285,12 +285,10 @@ Build the HTML documentation with the following command:
 
     $ docs build [--show]
 
-You can specify ``--show`` to open them in your browser after they are built.
+Specify ``--show`` to open them in your browser after they are built.
 
 To show the docs without building them again, run:
 
 .. code-block:: shell
 
     $ docs show
-
-We should consider adding the generated docs to source control, as well.

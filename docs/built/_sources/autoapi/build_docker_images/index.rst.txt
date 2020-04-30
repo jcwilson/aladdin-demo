@@ -142,6 +142,11 @@ Module Contents
 
 
 
+   .. method:: builder_tag(self)
+      :property:
+
+
+
    .. method:: dev(self)
       :property:
 
@@ -157,12 +162,17 @@ Module Contents
 
 
 
+   .. method:: add_user_to_sudoers(self)
+      :property:
+
+
+
    .. method:: base_image(self)
       :property:
 
 
 
-   .. method:: builder_image(self)
+   .. method:: builder_base_image(self)
       :property:
 
 
@@ -191,7 +201,7 @@ Module Contents
       :property:
 
 
-      Return the topologically sorted list of dependencies required for this component.
+      The topologically sorted list of dependencies required for this component.
 
       This will include the complete hierarchy of dependencies for this component, so it is only
       necessary to enumerate a component's direct dependencies in the component.yaml file.
@@ -272,7 +282,7 @@ Module Contents
    Kick off the build process with data gathered from the system and environment.
 
 
-.. function:: build(lamp: dict, hash: str, components: typing.List = None, default_python_version: str = '3.8', poetry_version: str = '1.0.5')
+.. function:: build(lamp: dict, hash: str, components: typing.List[str] = None, default_python_version: str = '3.8', poetry_version: str = '1.0.5')
 
    Build each component for the project.
 
@@ -286,6 +296,13 @@ Module Contents
                                   the component's ``component.yaml`` file, defaults to ``"3.8"``.
    :param poetry_version: The version of poetry to install in the component images, defaults to
                           ``"1.0.5"``.
+
+
+.. function:: validate_component_dependencies(components: typing.List[str]) -> networkx.DiGraph
+
+   Confirm that the components' dependency hierarchy has no cycles.
+
+   :return: The component dependency graph
 
 
 .. function:: read_component_config(component: str) -> ComponentConfig
@@ -319,6 +336,9 @@ Module Contents
    the ``component.yaml``.
 
    :param build_info: The build info populated from the config and command line arguments.
+
+
+.. function:: build_builder_image(build_info: BuildInfo, ignore_file: DockerIgnore)
 
 
 .. function:: aladdinize_image(build_info: BuildInfo, ignore_file: DockerIgnore)
@@ -357,12 +377,15 @@ Module Contents
    :param ignore_file: The ``.dockerignore`` file handle to be used to update its contents.
 
 
-.. function:: get_image_details(build_info: BuildInfo) -> (str, UserInfo)
+.. function:: extractor_image(from_image: str)
 
-   Extract python version and the user, group and home directory of the image's ``USER``.
+   Yields a function to receive a string shell command to run in the given image.
 
-   :param build_info: The build info populated from the config and command line arguments.
-   :return: The python version string and the user info from the current image.
+   Use this to run arbitrary shell commands in an image, even if the image has set its
+   ENTRYPOINT and CMD settinsg. It will run the command in a derived image with those settings
+   cleared, then delete the image once done.
+
+   :param from_image: The image to run the command in.
 
 
 .. function:: get_image_python_version(build_info: BuildInfo) -> str
@@ -381,7 +404,7 @@ Module Contents
    :return: The user info.
 
 
-.. function:: add_dependencies(build_info: BuildInfo)
+.. function:: add_dependency_components(build_info: BuildInfo)
 
    Add all of the components' dependencies to the image.
 
@@ -395,6 +418,12 @@ Module Contents
 .. function:: add_component(build_info: BuildInfo, component: str)
 
    Add a component's poetry-managed libraries and the component's own assets to the image.
+
+   If ``component`` is the component whose image is currently being built and it appears to be
+   using poetry to define its project, it will also be ``poetry installed`` in the image. This is
+   to account for any components that define commands under ``[tool.poetry.scripts]`` in their
+   ``pyproject.toml`` file. Those commands will be available in the container as first-class
+   command line commands.
 
    :param build_info: The build info populated from the config and command line arguments.
    :param component: The component to add to the image.

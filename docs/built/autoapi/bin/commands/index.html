@@ -204,6 +204,32 @@
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt id="bin.commands.get_component_graph">
+<code class="sig-name descname">get_component_graph</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; DiGraph<a class="reference internal" href="../../../_modules/bin/commands.html#get_component_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bin.commands.get_component_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the dependency graph for our components.</p>
+<p>This reads the <code class="docutils literal notranslate"><span class="pre">component.yaml</span></code> file for each component to determine dependencies.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The dependency graph.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="bin.commands.get_component_config">
+<code class="sig-name descname">get_component_config</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">component</span><span class="p">:</span> <span class="n">Component</span></em><span class="sig-paren">)</span> &#x2192; dict<a class="reference internal" href="../../../_modules/bin/commands.html#get_component_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bin.commands.get_component_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read the contents of the component’s component.yaml yaml file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>component</strong> – The component whose component.yaml you wish to retrieve.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The config contents or the empty dictionary if it was not present.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </div>
 </div>
 
