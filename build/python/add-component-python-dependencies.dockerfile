@@ -9,33 +9,6 @@ ARG FROM_IMAGE
 
 FROM $BUILDER_IMAGE AS builder
 
-# Install packages required to build native library components
-RUN apt-get update \
- && apt-get -y --no-install-recommends install \
-    gettext \
-    gcc \
-    g++ \
-    make \
-    libc6-dev \
- && apt-get clean
-
-# Upgrade pip
-RUN pip install --upgrade pip
-
-# Configure pip
-COPY pip.conf /etc/pip.conf
-
-# Install poetry under the root user's home directory
-ARG POETRY_VERSION
-ADD https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py /tmp/get-poetry.py
-RUN python /tmp/get-poetry.py --version $POETRY_VERSION
-
-# Configure poetry
-COPY poetry.toml /root/.config/pypoetry/config.toml
-
-# Move to build directory before copying items to non-fixed location
-WORKDIR /build
-
 # Copy the component's poetry files
 # This assumes the build script has omitted everything but the component's poetry
 # files, like {component}/pyproject.toml and {component}/poetry.lock from the context

@@ -1,32 +1,16 @@
-### BUILD POETRY PACKAGE MANAGER #######################################################
-# This downloads, installs and configures the poetry tool under the root user in the
-# build image.
-########################################################################################
-ARG BUILDER_IMAGE
-ARG FROM_IMAGE
-
-FROM $BUILDER_IMAGE as builder
-
-# Configure pip
-COPY pip.conf /etc/pip.conf
-
-# Install poetry
-ARG POETRY_VERSION=1.0.5
-ADD https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py /tmp/get-poetry.py
-RUN python /tmp/get-poetry.py --version $POETRY_VERSION
-
-# Configure poetry
-COPY poetry.toml /root/.config/pypoetry/config.toml
-### END MULTISTAGE BUILD ###############################################################
-
-
-
 ### INSTALL POETRY PACKAGE MANAGER #######################################################
 # Copy the poetry tool and its configuration into the target image. This also includes
 # a bit of pip global configuration since poetry uses it under the hood (as do our
 # own tools).
 ########################################################################################
+ARG BUILDER_IMAGE
+ARG FROM_IMAGE
+
+# We'll copy over the builder image's poetry installation
+FROM $BUILDER_IMAGE as builder
+
 FROM $FROM_IMAGE
+
 ARG USER_CHOWN=root:root
 ARG USER_HOME=/root
 

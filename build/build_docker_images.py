@@ -6,6 +6,7 @@ It will run when ``aladdin build`` is invoked.
 """
 import atexit
 import collections
+import contextlib
 import functools
 import json
 import logging
@@ -17,11 +18,12 @@ import sys
 import tempfile
 import textwrap
 import typing
-import yaml
+import uuid
 
 import coloredlogs
 import networkx
 import verboselogs
+import yaml
 
 
 class Undefined:
@@ -152,6 +154,10 @@ class BuildInfo(
         return f"{self.project}-{self.component}:editor"
 
     @property
+    def builder_tag(self):
+        return f"{self.project}-{self.component}:builder"
+
+    @property
     def dev(self):
         return self.hash == "local"
 
@@ -164,11 +170,15 @@ class BuildInfo(
         return "" if self.dev else "-O"
 
     @property
+    def add_user_to_sudoers(self):
+        return self.dev
+
+    @property
     def base_image(self):
         return self.config.image_base or f"python:{self.language_version}-slim"
 
     @property
-    def builder_image(self):
+    def builder_base_image(self):
         return f"python:{self._language_version}-slim"
 
     @property
@@ -468,9 +478,16 @@ def build_python_component_image(build_info: BuildInfo):
     """
     try:
         logger.notice("Building image for component: %s", build_info.component)
+
+        # Determine the python version of the base image
+        build_info.set_language_version(get_image_python_version(build_info))
+
         # Start off by simply tagging our base image
         # All subsequent steps here will just move the tag to the newly built image
         tag_base_image(build_info)
+
+        # Create a builder image that can be used across components (rely on Dockerfile caching)
+        build_builder_image(build_info)
 
         # Opt out by setting image.aladdinize=false or by specifying a base image
         if build_info.aladdinize:
@@ -480,14 +497,9 @@ def build_python_component_image(build_info: BuildInfo):
         if build_info.specialized_dockerfile:
             build_specialized_image(build_info)
 
-        # Extract some values from the base image for the build info
-        python_version, user_info = get_image_details(build_info)
-        # Set the python version so the builder image can use the same
-        # python version as the base image
-        build_info.set_language_version(python_version)
-        # Set the user info from the image so we can install poetry
-        # and python libraries in the correct location
-        build_info.set_user_info(user_info)
+        # Set the user info from the image so we can install poetry and python libraries
+        # in the correct location
+        build_info.set_user_info(get_image_user_info(build_info))
 
         # Opt out by setting image.add_poetry=false or by specifying a base image
         if build_info.add_poetry:
@@ -529,6 +541,23 @@ def tag_base_image(build_info: BuildInfo):
 
 
 @dockerignore("w")
+def build_builder_image(build_info: BuildInfo, ignore_file: DockerIgnore):
+    logger.info("Creating builder image for %s component", build_info.component)
+
+    ignore_file.ignore_all()
+    ignore_file.include("pip.conf")
+    ignore_file.include("poetry.toml")
+
+    _docker_build(
+        dockerfile="build/python/builder.dockerfile",
+        tag=build_info.builder_tag,
+        buildargs=dict(
+            FROM_IMAGE=build_info.builder_base_image, POETRY_VERSION=build_info.poetry_version
+        ),
+    )
+
+
+@dockerignore("w")
 def aladdinize_image(build_info: BuildInfo, ignore_file: DockerIgnore):
     """
     Add the aladdin boilerplate.
@@ -548,7 +577,11 @@ def aladdinize_image(build_info: BuildInfo, ignore_file: DockerIgnore):
     _docker_build(
         dockerfile="build/python/aladdinize.dockerfile",
         tag=build_info.tag,
-        buildargs=dict(FROM_IMAGE=build_info.tag, PYTHON_OPTIMIZE=build_info.python_optimize),
+        buildargs=dict(
+            FROM_IMAGE=build_info.tag,
+            PYTHON_OPTIMIZE=build_info.python_optimize,
+            ADD_TO_SUDOERS="true" if build_info.add_user_to_sudoers else "false",
+        ),
     )
 
 
@@ -566,15 +599,12 @@ def add_poetry(build_info: BuildInfo, ignore_file: DockerIgnore):
     logger.info("Adding poetry to %s component", build_info.component)
 
     ignore_file.ignore_all()
-    ignore_file.include("pip.conf")
-    ignore_file.include("poetry.toml")
-    ignore_file.ignore_defaults()
 
     _docker_build(
         dockerfile="build/python/add-poetry.dockerfile",
         tag=build_info.tag,
         buildargs=dict(
-            BUILDER_IMAGE=build_info.builder_image,
+            BUILDER_IMAGE=build_info.builder_tag,
             FROM_IMAGE=build_info.tag,
             POETRY_VERSION=build_info.poetry_version,
             USER_HOME=build_info.user_info.home,
@@ -610,31 +640,53 @@ def build_specialized_image(build_info: BuildInfo, ignore_file: DockerIgnore):
     _docker_build(
         dockerfile=build_info.specialized_dockerfile,
         tag=build_info.tag,
-        buildargs=dict(FROM_IMAGE=build_info.tag, PYTHON_OPTIMIZE=build_info.python_optimize),
+        buildargs=dict(
+            BUILDER_IMAGE=build_info.builder_tag,
+            FROM_IMAGE=build_info.tag,
+            PYTHON_OPTIMIZE=build_info.python_optimize,
+        ),
     )
 
 
-def get_image_details(build_info: BuildInfo) -> (str, UserInfo):
+@contextlib.contextmanager
+def extractor_image(from_image: str):
     """
-    Extract python version and the user, group and home directory of the image's ``USER``.
+    Yields a function to receive a string shell command to run in the given image.
 
-    :param build_info: The build info populated from the config and command line arguments.
-    :return: The python version string and the user info from the current image.
+    Use this to run arbitrary shell commands in an image, even if the image has set its
+    ENTRYPOINT and CMD settinsg. It will run the command in a derived image with those settings
+    cleared, then delete the image once done.
+
+    :param from_image: The image to run the command in.
     """
-    logger.info("Extracting base image info")
-
     # Build a temporary image that can be used to pull image data out of the container.
     # We need to get rid of the ENTRYPOINT and CMD configurations.
+    IMAGE_NAME = f"info_extractor:{uuid.uuid1().hex}"
+
     _docker_build(
         dockerfile="build/python/lobotomize.dockerfile",
-        tag="info_extractor",
-        buildargs=dict(FROM_IMAGE=build_info.tag),
+        tag=IMAGE_NAME,
+        buildargs=dict(FROM_IMAGE=from_image),
     )
 
+    def call_in_lobotomized_image(shell_command: str) -> str:
+        """
+        Execute a shell command in a container from the lobotomized image.
+
+        :param shell_command: The command to execute.
+        :return: The resulting stdout output string.
+        """
+        sp = subprocess.run(
+            ["docker", "run", "--rm", IMAGE_NAME, "/bin/sh", "-c", shell_command],
+            check=True,
+            stdout=subprocess.PIPE,
+        )
+        return sp.stdout.decode(sys.stdout.encoding).strip()
+
     try:
-        return get_image_python_version(build_info), get_image_user_info(build_info)
+        yield call_in_lobotomized_image
     finally:
-        _check_call(["docker", "rmi", "info_extractor"])
+        _check_call(["docker", "rmi", IMAGE_NAME])
 
 
 def get_image_python_version(build_info: BuildInfo) -> str:
@@ -650,9 +702,11 @@ def get_image_python_version(build_info: BuildInfo) -> str:
         return build_info.config.language_version
 
     try:
-        python_version = _call_in_lobotomized_image(
-            "python -c 'import platform; print(platform.python_version())'"
-        )
+        with extractor_image(from_image=build_info.base_image) as call_in_extractor:
+            python_version = call_in_extractor(
+                "python -c 'import platform; print(platform.python_version())'"
+            )
+
         assert (
             python_version.count(".") == 2
         ), f"Unexpected python version string: {retrieved_version}"
@@ -676,9 +730,11 @@ def get_image_user_info(build_info: BuildInfo) -> UserInfo:
         return build_info.config.image_user_info
 
     try:
-        user_name, user_groups, user_home = _call_in_lobotomized_image(
-            "whoami; groups; echo $HOME"
-        ).split("\n")
+        with extractor_image(from_image=build_info.tag) as call_in_extractor:
+            user_name, user_groups, user_home = call_in_extractor(
+                "whoami; groups; echo $HOME"
+            ).split("\n")
+
         user_groups = user_groups.split()
         user_info = UserInfo(
             name=user_name, group=user_groups[0] if user_groups else None, home=user_home
@@ -689,21 +745,6 @@ def get_image_user_info(build_info: BuildInfo) -> UserInfo:
     except Exception:
         logger.error("Failed to extract user info from base image")
         raise ConfigurationException("You must provide image.user_info in component.yaml")
-
-
-def _call_in_lobotomized_image(shell_command: str) -> str:
-    """
-    Execute a shell command in a container from the lobotomized image.
-
-    :param shell_command: The command to execute.
-    :return: The resulting stdout output string.
-    """
-    sp = subprocess.run(
-        ["docker", "run", "--rm", "info_extractor", "/bin/sh", "-c", shell_command],
-        check=True,
-        stdout=subprocess.PIPE,
-    )
-    return sp.stdout.decode(sys.stdout.encoding).strip()
 
 
 def add_dependency_components(build_info: BuildInfo):
@@ -781,7 +822,7 @@ def add_component_python_packages(build_info: BuildInfo, component: str, ignore_
         dockerfile="build/python/add-component-python-dependencies.dockerfile",
         tag=build_info.tag,
         buildargs=dict(
-            BUILDER_IMAGE=build_info.builder_image,
+            BUILDER_IMAGE=build_info.builder_tag,
             FROM_IMAGE=build_info.tag,
             COMPONENT=component,
             POETRY_VERSION=build_info.poetry_version,

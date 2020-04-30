@@ -23,8 +23,15 @@ RUN python $PYTHON_OPTIMIZE -m compileall
 WORKDIR /code
 ENV PYTHONPATH /code
 
-# Create and switch to the unprivileged user account
-RUN useradd -m -U -d /home/aladdin-user aladdin-user
+# Create the unprivileged user account
+ARG ADD_TO_SUDOERS
+RUN useradd -m -U -d /home/aladdin-user aladdin-user \
+ && if "$ADD_TO_SUDOERS"; then \
+        apt-get update && apt-get -y --no-install-recommends install sudo && rm -rf /var/lib/apt/lists/*; \
+        echo >> /etc/sudoers "aladdin-user ALL=(ALL) NOPASSWD: ALL"; \
+    fi
+
+# Switch to the unprivileged user account
 USER aladdin-user
 ### END BASE IMAGE BUILD ###############################################################
 # We now have the beginnings of a functional image. Any dependencies have yet to be
