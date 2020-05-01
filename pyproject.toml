@@ -8,6 +8,9 @@ packages = [
     # See tool.poetry.scripts below.
     {include = "bin"},
 ]
+include = [
+    "build/python/*.dockerfile"
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"

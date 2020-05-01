@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "pipeline"
 version = "0.1.0"
-description = "This component contains tools for CI validation and artifact generation."
-authors = ["Your Name <you@example.com>"]
+description = "CI validation tools"
+authors = ["Fivestars <dev@fivestarss.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"

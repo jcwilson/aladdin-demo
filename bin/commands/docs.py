@@ -33,7 +33,7 @@ from . import LogLevel, get_component_graph, install_coloredlogs
 # Created in the callback
 logger = None
 
-app = typer.Typer()
+app = typer.Typer(add_completion=False)
 """
 :autoapiskip:
 """

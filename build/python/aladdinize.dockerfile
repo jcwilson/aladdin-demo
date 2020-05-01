@@ -33,7 +33,3 @@ RUN useradd -m -U -d /home/aladdin-user aladdin-user \
 
 # Switch to the unprivileged user account
 USER aladdin-user
-### END BASE IMAGE BUILD ###############################################################
-# We now have the beginnings of a functional image. Any dependencies have yet to be
-# added to the image, though.
-########################################################################################

@@ -25,11 +25,9 @@ RUN cd "$COMPONENT" \
  && . /root/.poetry/env \
  && poetry install $POETRY_NO_DEV \
  && python $PYTHON_OPTIMIZE -m compileall /root/.local
-### END MULTISTAGE BUILD ###############################################################
+### END MULTISTAGE BUILD STEP ##########################################################
 # We can now copy the contents of /root/.local to our concrete image
 ########################################################################################
-
-
 
 
 ### POPULATE IMAGE BUILD ###############################################################
@@ -37,10 +35,10 @@ RUN cd "$COMPONENT" \
 # concrete image, leaving all the build tooling behind.
 ########################################################################################
 FROM $FROM_IMAGE
-ARG USER_HOME
-ARG USER_CHOWN
 
 # Copy installed python packages from build image and include them in $PATH
+ARG USER_HOME
+ARG USER_CHOWN
 COPY --from="builder" --chown=$USER_CHOWN /root/.local $USER_HOME/.local
 
 # Check that our libraries still don't have conflicts

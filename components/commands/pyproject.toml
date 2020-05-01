@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "commands"
 version = "0.1.0"
-description = "Modules found here define aladdin commands"
-authors = ["Your Name <you@example.com>"]
+description = "Aladdin commands"
+authors = ["Fivestars <dev@fivestarss.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.7"

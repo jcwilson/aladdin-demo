@@ -6,7 +6,7 @@ language:
   version: 3.7.6
 
 image:
-  base: jupyter/minimal-notebook:dc9744740e12
+  base: jupyter/minimal-notebook:latest
 
 dependencies:
 - commands

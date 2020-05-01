@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "api"
 version = "0.1.0"
-description = "The HTTP API server for this project"
-authors = ["Your Name <you@example.com>"]
+description = "HTTP API server"
+authors = ["Fivestars <dev@fivestarss.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.7"

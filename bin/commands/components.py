@@ -36,7 +36,7 @@ from . import Component, LogLevel, get_component_config, get_component_graph, in
 # Created in the callback
 logger = None
 
-app = typer.Typer()
+app = typer.Typer(add_completion=False)
 """
 :autoapiskip:
 """

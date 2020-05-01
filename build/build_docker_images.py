@@ -175,11 +175,14 @@ class BuildInfo(
 
     @property
     def base_image(self):
-        return self.config.image_base or f"python:{self.language_version}-slim"
+        return (
+            self.config.image_base
+            or f"python:{'.'.join(self.language_version.split('.', 2)[:2])}-slim"
+        )
 
     @property
     def builder_base_image(self):
-        return f"python:{self._language_version}-slim"
+        return f"python:{'.'.join(self.language_version.split('.', 2)[:2])}-slim"
 
     @property
     def aladdinize(self):
@@ -489,6 +492,10 @@ def build_python_component_image(build_info: BuildInfo):
         # Create a builder image that can be used across components (rely on Dockerfile caching)
         build_builder_image(build_info)
 
+        # Opt out by setting image.add_poetry=false or by specifying a base image
+        if build_info.add_poetry:
+            add_poetry(build_info)
+
         # Opt out by setting image.aladdinize=false or by specifying a base image
         if build_info.aladdinize:
             aladdinize_image(build_info)
@@ -497,13 +504,9 @@ def build_python_component_image(build_info: BuildInfo):
         if build_info.specialized_dockerfile:
             build_specialized_image(build_info)
 
-        # Set the user info from the image so we can install poetry and python libraries
-        # in the correct location
+        # Set the user info from the image so we can install python libraries in
+        # the correct location
         build_info.set_user_info(get_image_user_info(build_info))
-
-        # Opt out by setting image.add_poetry=false or by specifying a base image
-        if build_info.add_poetry:
-            add_poetry(build_info)
 
         # Add the component dependencies' assets
         add_dependency_components(build_info)
@@ -511,7 +514,11 @@ def build_python_component_image(build_info: BuildInfo):
         # Add the component's assets
         add_component(build_info, build_info.component)
 
-        # Build the editor image for facilitating poetry package updates
+        # Add the user's ~/.local/bin to the PATH
+        if build_info.add_poetry:
+            add_local_bin(build_info)
+
+        # # Build the editor image for facilitating poetry package updates
         build_editor_image(build_info)
 
     except Exception:
@@ -537,6 +544,7 @@ def tag_base_image(build_info: BuildInfo):
         "Tagging base image '%s' for %s component", build_info.base_image, build_info.component
     )
 
+    _check_call(["docker", "pull", build_info.base_image])
     _check_call(["docker", "tag", build_info.base_image, build_info.tag])
 
 
@@ -550,7 +558,7 @@ def build_builder_image(build_info: BuildInfo, ignore_file: DockerIgnore):
 
     _docker_build(
         dockerfile="build/python/builder.dockerfile",
-        tags=[build_info.builder_tag],
+        tag=build_info.builder_tag,
         buildargs=dict(
             FROM_IMAGE=build_info.builder_base_image, POETRY_VERSION=build_info.poetry_version
         ),
@@ -576,12 +584,13 @@ def aladdinize_image(build_info: BuildInfo, ignore_file: DockerIgnore):
 
     _docker_build(
         dockerfile="build/python/aladdinize.dockerfile",
-        tags=[build_info.tag],
+        tag=build_info.tag,
         buildargs=dict(
             FROM_IMAGE=build_info.tag,
             PYTHON_OPTIMIZE=build_info.python_optimize,
             ADD_TO_SUDOERS="true" if build_info.add_user_to_sudoers else "false",
         ),
+        purpose="aladdinize",
     )
 
 
@@ -602,14 +611,9 @@ def add_poetry(build_info: BuildInfo, ignore_file: DockerIgnore):
 
     _docker_build(
         dockerfile="build/python/add-poetry.dockerfile",
-        tags=[build_info.tag],
-        buildargs=dict(
-            BUILDER_IMAGE=build_info.builder_tag,
-            FROM_IMAGE=build_info.tag,
-            POETRY_VERSION=build_info.poetry_version,
-            USER_HOME=build_info.user_info.home,
-            USER_CHOWN=build_info.user_info.chown,
-        ),
+        tag=build_info.tag,
+        buildargs=dict(BUILDER_IMAGE=build_info.builder_tag, FROM_IMAGE=build_info.tag),
+        purpose="add-poetry",
     )
 
 
@@ -639,12 +643,13 @@ def build_specialized_image(build_info: BuildInfo, ignore_file: DockerIgnore):
 
     _docker_build(
         dockerfile=build_info.specialized_dockerfile,
-        tags=[build_info.tag],
+        tag=build_info.tag,
         buildargs=dict(
             BUILDER_IMAGE=build_info.builder_tag,
             FROM_IMAGE=build_info.tag,
             PYTHON_OPTIMIZE=build_info.python_optimize,
         ),
+        purpose="specialized",
     )
 
 
@@ -665,7 +670,7 @@ def extractor_image(from_image: str):
 
     _docker_build(
         dockerfile="build/python/lobotomize.dockerfile",
-        tags=[IMAGE_NAME],
+        tag=IMAGE_NAME,
         buildargs=dict(FROM_IMAGE=from_image),
     )
 
@@ -726,7 +731,7 @@ def get_image_user_info(build_info: BuildInfo) -> UserInfo:
     """
     # Go directly to the config here
     if build_info.config.image_user_info:
-        logger.notice("Using configured user info: %s", user_info)
+        logger.notice("Using configured user info: %s", build_info.config.image_user_info)
         return build_info.config.image_user_info
 
     try:
@@ -820,17 +825,17 @@ def add_component_python_packages(build_info: BuildInfo, component: str, ignore_
     # Build the poetry dependencies
     _docker_build(
         dockerfile="build/python/add-component-python-dependencies.dockerfile",
-        tags=[build_info.tag],
+        tag=build_info.tag,
         buildargs=dict(
             BUILDER_IMAGE=build_info.builder_tag,
             FROM_IMAGE=build_info.tag,
             COMPONENT=component,
-            POETRY_VERSION=build_info.poetry_version,
             POETRY_NO_DEV=build_info.poetry_no_dev,
             PYTHON_OPTIMIZE=build_info.python_optimize,
             USER_HOME=build_info.user_info.home,
             USER_CHOWN=build_info.user_info.chown,
         ),
+        purpose=f"add-{component}-packages",
     )
 
 
@@ -867,13 +872,39 @@ def add_component_content(
     # Copy the built poetry dependencies and the component code into the target image
     _docker_build(
         dockerfile="build/python/add-component-content.dockerfile",
-        tags=[build_info.tag],
+        tag=build_info.tag,
         buildargs=dict(
             FROM_IMAGE=build_info.tag,
             COMPONENT=component,
             POETRY_INSTALL_COMPONENT="true" if poetry_install_component else "false",
             PYTHON_OPTIMIZE=build_info.python_optimize,
         ),
+        purpose=f"add-{component}-content",
+    )
+
+
+@dockerignore("w")
+def add_local_bin(build_info: BuildInfo, ignore_file: DockerIgnore):
+    """
+    Add the image user's ``~/.local/bin`` directory to the image PATH.
+
+    This ensures that any scripts installed by the component's python packages are available.
+
+    :param build_info: The build info populated from the config and command line arguments.
+    :param ignore_file: The ``.dockerignore`` file handle to be used to update its contents.
+    """
+    logger.info(
+        "Adding %s/.local/bin to PATH for %s component",
+        build_info.user_info.home,
+        build_info.component,
+    )
+
+    ignore_file.ignore_all()
+
+    _docker_build(
+        dockerfile="build/python/add-local-bin-to-path.dockerfile",
+        tag=build_info.tag,
+        buildargs=dict(FROM_IMAGE=build_info.tag, USER_HOME=build_info.user_info.home),
     )
 
 
@@ -888,28 +919,39 @@ def build_editor_image(build_info: BuildInfo, ignore_file: DockerIgnore):
     :param build_info: The build info populated from the config and command line arguments.
     :param ignore_file: The ``.dockerignore`` file handle to be used to update its contents.
     """
+    logger.info("Building editor image for %s component", build_info.component)
+
     ignore_file.ignore_all()
 
     _docker_build(
         dockerfile="build/python/lobotomize.dockerfile",
-        tags=[build_info.editor_tag],
+        tag=build_info.editor_tag,
         buildargs=dict(FROM_IMAGE=build_info.tag),
     )
 
 
-def _docker_build(dockerfile: str, tags: typing.List[str], buildargs: dict = None):
+def _docker_build(dockerfile: str, tag: str, buildargs: dict = None, purpose: str = None):
     """
     A convenience wrapper for calling out to "docker build".
 
     We always send the same context: the components/ directory.
 
+    If ``purpose`` is provided, it will create an extra tag on the resulting image. This
+    can be used to help preserve these interstitial images when a ``docker system prune``
+    takes place. This will only happen if the build hash is ``local``.
+
     :param dockerfile: The dockerfile to build against.
     :param tags: The tags to be applied to the built image.
     :param buildargs: Values for ARG instructions in the dockerfile.
+    :param purpose: A string used to create an extra tag for the resulting image.
     """
     buildargs = buildargs or {}
 
-    assert tags, "At least one tag is required"
+    tags = [tag]
+    if purpose:
+        tag_image, tag_tag = tag.split(":")
+        if tag_tag == "local":
+            tags.append(f"{tag_image}-{purpose}:{tag_tag}")
 
     cmd = ["docker", "build"]
     for key, value in buildargs.items():

@@ -77,7 +77,7 @@ def get_component_graph() -> DiGraph:
 
     This reads the ``component.yaml`` file for each component to determine dependencies.
 
-    :return: The dependency graph.
+    :returns: The dependency graph.
     """
     # Create the graph
     components = DiGraph()
@@ -103,7 +103,7 @@ def get_component_config(component: Component) -> dict:
     Read the contents of the component's component.yaml yaml file.
 
     :param component: The component whose component.yaml you wish to retrieve.
-    :return: The config contents or the empty dictionary if it was not present.
+    :returns: The config contents or the empty dictionary if it was not present.
     """
     try:
         with open(

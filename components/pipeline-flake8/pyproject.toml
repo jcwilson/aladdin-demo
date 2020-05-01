@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "pipeline-flake8"
 version = "0.1.0"
-description = "These tools would normally be part of the pipeline component, but there's a version conflict with pycodestyle at the moment"
-authors = ["Your Name <you@example.com>"]
+description = ""
+authors = ["Fivestars <dev@fivestarss.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
