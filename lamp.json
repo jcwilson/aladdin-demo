@@ -1,6 +1,5 @@
 {
     "name": "fast-api-prototype",
-    "build_docker": "build/build_docker_images.py",
     "helm_chart": "helm",
     "docker_images": [
         "fast-api-prototype-api",

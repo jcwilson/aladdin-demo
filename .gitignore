@@ -1,6 +1,9 @@
 # Local overrides that you don't want to commit to the repo
 helm/values/site.yaml
 
+# Aladdin build artifacts
+components/*/build.Dockerfile
+
 # User-specific jupyter notebook journal
 .ipynb_checkpoints
 # Omit unrecognized jupyter notebooks
@@ -13,6 +16,7 @@ docs/built/.doctrees/environment.pickle
 
 # Poetry build assets
 *.egg-info
+
 
 # Note: If you're thinking about adding IDE-related or language artifacts here
 #       consider adding those to your global git core.excludesfile instead.

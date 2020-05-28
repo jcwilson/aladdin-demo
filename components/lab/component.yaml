@@ -7,6 +7,9 @@ language:
 
 image:
   base: jupyter/minimal-notebook:latest
+  user:
+    name: jovyan
+    group: users
 
 dependencies:
 - commands

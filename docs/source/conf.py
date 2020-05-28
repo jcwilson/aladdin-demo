@@ -71,10 +71,7 @@ html_static_path = ["_static"]
 # Configure the autoapi extension
 components_to_document = ["shared", "commands", "api"]
 autoapi_type = "python"
-autoapi_dirs = [f"../../components/{component}" for component in components_to_document] + [
-    "../../bin",
-    "../../build",
-]
+autoapi_dirs = [f"../../components/{component}" for component in components_to_document]
 autoapi_add_toctree_entry = False
 autoapi_options = ["members", "undoc-members", "show-inheritance", "special-members"]
 
@@ -88,11 +85,4 @@ def setup(app):
 
 
 def skip_member_if(app, what, name, obj, skip, options):
-    if name == "bin":
-        return True
-    return (
-        name.endswith(".logger")
-        or (name.startswith("commands") and name.endswith(".parse_args"))
-        or (name.startswith("bin") and name.endswith(".main"))
-        or "autoapiskip:" in obj.docstring
-    ) or None
+    return (name.endswith(".logger") or "autoapiskip:" in obj.docstring) or None

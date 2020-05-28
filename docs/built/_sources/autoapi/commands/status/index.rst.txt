@@ -12,6 +12,11 @@
 Module Contents
 ---------------
 
+.. function:: parse_args(sub_parser)
+
+   Parse arguments for the "status" command.
+
+
 .. function:: print_status(_)
 
    Print the status of the service's pods.

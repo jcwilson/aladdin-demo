@@ -12,6 +12,11 @@
 Module Contents
 ---------------
 
+.. function:: parse_args(sub_parser)
+
+   Parse arguments for the "get-pods" command.
+
+
 .. function:: get_pods(_)
 
    Log the list of pods for this service.

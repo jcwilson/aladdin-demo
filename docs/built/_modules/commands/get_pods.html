@@ -160,10 +160,10 @@
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">parse_args</span><span class="p">(</span><span class="n">sub_parser</span><span class="p">):</span>
+<div class="viewcode-block" id="parse_args"><a class="viewcode-back" href="../../autoapi/commands/get_pods/index.html#commands.get_pods.parse_args">[docs]</a><span class="k">def</span> <span class="nf">parse_args</span><span class="p">(</span><span class="n">sub_parser</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Parse arguments for the &quot;get-pods&quot; command.&quot;&quot;&quot;</span>
     <span class="n">subparser</span> <span class="o">=</span> <span class="n">sub_parser</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span><span class="s2">&quot;get-pods&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Get all project pods&quot;</span><span class="p">)</span>
-    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">get_pods</span><span class="p">)</span>
+    <span class="n">subparser</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">get_pods</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="get_pods"><a class="viewcode-back" href="../../autoapi/commands/get_pods/index.html#commands.get_pods.get_pods">[docs]</a><span class="k">def</span> <span class="nf">get_pods</span><span class="p">(</span><span class="n">_</span><span class="p">):</span>
