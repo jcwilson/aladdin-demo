@@ -1,6 +1,6 @@
 {
     "name": "fast-api-prototype",
-    "helm_chart": "helm",
+    "helm_chart": "helm/fast-api-prototype",
     "docker_images": [
         "fast-api-prototype-api",
         "fast-api-prototype-commands"

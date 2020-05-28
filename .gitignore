@@ -1,5 +1,5 @@
 # Local overrides that you don't want to commit to the repo
-helm/values/site.yaml
+helm/*/values/site.yaml
 
 # Aladdin build artifacts
 components/*/build.Dockerfile
