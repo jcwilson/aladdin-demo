@@ -1,16 +1,14 @@
 meta:
   version: 1
-
 language:
   name: python
   version: 3.7.6
-
 image:
   base: jupyter/minimal-notebook:latest
   user:
     name: jovyan
     group: users
-
+    home: /home/jovyan
 dependencies:
 - commands
 - api

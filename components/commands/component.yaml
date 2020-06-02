@@ -4,6 +4,9 @@ language:
   name: python
 image:
   base: fivestarsos/commands-base:2.0.0
-  aladdinize: true
+  user:
+    name: root
+    group: root
+    home: /root
 dependencies:
 - shared

@@ -9,6 +9,7 @@ version = "0.7.12"
 [[package]]
 category = "dev"
 description = ""
+develop = true
 name = "aladdin-project-tools"
 optional = false
 python-versions = "^3.7"
@@ -23,14 +24,14 @@ networkx = "^2.4"
 sphinx = "^3.0.1"
 sphinx-autoapi = "^1.3.0"
 sphinx-rtd-theme = "^0.4.3"
-toposort = "^1.5"
-typer = "^0.1.1"
+typer = "^0.2.1"
 verboselogs = "^1.7"
 
 [package.source]
-reference = "327adea38c7bf97f2a80d932bfa898b56d24cb86"
-type = "git"
-url = "https://github.com/jcwilson/aladdin-project-tools.git"
+reference = ""
+type = "directory"
+url = "../aladdin-project-tools"
+
 [[package]]
 category = "dev"
 description = "An abstract syntax tree for Python with inference support."
@@ -483,19 +484,11 @@ test = ["pytest"]
 
 [[package]]
 category = "dev"
-description = "Implements a topological sort algorithm."
-name = "toposort"
-optional = false
-python-versions = "*"
-version = "1.5"
-
-[[package]]
-category = "dev"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
 name = "typer"
 optional = false
 python-versions = ">=3.6"
-version = "0.1.1"
+version = "0.2.1"
 
 [package.dependencies]
 click = ">=7.1.1,<7.2.0"
@@ -504,7 +497,7 @@ click = ">=7.1.1,<7.2.0"
 all = ["colorama", "shellingham"]
 dev = ["autoflake", "flake8"]
 doc = ["mkdocs", "mkdocs-material", "markdown-include"]
-test = ["shellingham", "pytest (>=4.4.0)", "pytest-cov", "coverage", "pytest-xdist", "pytest-sugar", "mypy", "black", "isort"]
+test = ["shellingham", "pytest (>=4.4.0,<5.4)", "pytest-cov", "coverage", "pytest-xdist", "pytest-sugar", "mypy", "black", "isort"]
 
 [[package]]
 category = "dev"
@@ -545,7 +538,7 @@ python-versions = "*"
 version = "1.12.1"
 
 [metadata]
-content-hash = "32e7cbf2b1ad504cacc154c23485ad7573f910ab13a8023c6120c30ebb8f6ed4"
+content-hash = "6220e87662810d5786902c07c19c1fa53d15c204a49e4466ccfc4e85f3602ea8"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -765,13 +758,9 @@ sphinxcontrib-serializinghtml = [
     {file = "sphinxcontrib-serializinghtml-1.1.4.tar.gz", hash = "sha256:eaa0eccc86e982a9b939b2b82d12cc5d013385ba5eadcc7e4fed23f4405f77bc"},
     {file = "sphinxcontrib_serializinghtml-1.1.4-py2.py3-none-any.whl", hash = "sha256:f242a81d423f59617a8e5cf16f5d4d74e28ee9a66f9e5b637a18082991db5a9a"},
 ]
-toposort = [
-    {file = "toposort-1.5-py2.py3-none-any.whl", hash = "sha256:d80128b83b411d503b0cdb4a8f172998bc1d3b434b6402a349b8ebd734d51a80"},
-    {file = "toposort-1.5.tar.gz", hash = "sha256:dba5ae845296e3bf37b042c640870ffebcdeb8cd4df45adaa01d8c5476c557dd"},
-]
 typer = [
-    {file = "typer-0.1.1-py3-none-any.whl", hash = "sha256:e6fdb492c2f20d2d8123b8b2f4efa060770f92664aad8d36126f53dce501e9a8"},
-    {file = "typer-0.1.1.tar.gz", hash = "sha256:180d746de86724f9f94e90fa95caa065b5af9b3b3c77fc9d4d4ca1b75adc0c01"},
+    {file = "typer-0.2.1-py3-none-any.whl", hash = "sha256:9b66756dfcc9e9f829a33f9019757225af0c8e87e1e692f103556335d5ae3b25"},
+    {file = "typer-0.2.1.tar.gz", hash = "sha256:a8c49418f20c1d1b04a34424dded86cebf1f87042a8e448c6faa63cf38b9c0af"},
 ]
 unidecode = [
     {file = "Unidecode-1.1.1-py2.py3-none-any.whl", hash = "sha256:1d7a042116536098d05d599ef2b8616759f02985c85b4fef50c78a5aaf10822a"},
