@@ -1,9 +1,8 @@
 {
-    "name": "aladdin-demo",
-    "build_docker": "./build/build_docker.sh",
-    "helm_chart": "./helm/aladdin-demo",
+    "name": "fast-api-prototype",
+    "helm_chart": "helm/fast-api-prototype",
     "docker_images": [
-        "aladdin-demo",
-        "aladdin-demo-commands"
+        "fast-api-prototype-api",
+        "fast-api-prototype-commands"
     ]
 }

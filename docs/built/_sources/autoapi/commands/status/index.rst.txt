@@ -1,0 +1,41 @@
+:mod:`commands.status`
+======================
+
+.. py:module:: commands.status
+
+.. autoapi-nested-parse::
+
+   A command to return the current status of this service.
+
+
+
+Module Contents
+---------------
+
+.. function:: parse_args(sub_parser)
+
+   Parse arguments for the "status" command.
+
+
+.. function:: print_status(_)
+
+   Print the status of the service's pods.
+
+
+.. function:: print_api_status()
+   :async:
+
+   Log the status of the api pod.
+
+
+.. function:: print_redis_status()
+   :async:
+
+   Log the status of the redis backend.
+
+
+.. function:: print_elasticsearch_status()
+
+   Log the status of the elasticsearch backend.
+
+

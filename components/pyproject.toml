@@ -1,0 +1,10 @@
+# Utilized by the pipeline component, but the rules apply to all component code.
+
+[tool.black]
+line-length = 100
+
+[tool.isort]
+line_length = 100
+multi_line_output = 3  # Matches black formatting
+use_parentheses = true
+include_trailing_comma = true

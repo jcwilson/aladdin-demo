@@ -1,0 +1,177 @@
+# Define some convenience variables to make some templating logic easier.
+# For some reason uvicorn --reload does not work when serving over Unix domain sockets.
+# Unix domain sockets are more performant, but we'll use TCP if there's no nginx or if we're using autoreload.
+{{ $useUDS := and .Values.api.nginx.use (not .Values.api.uvicorn.autoreload) }}
+
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}-api
+  labels:
+    project: {{ .Chart.Name }}
+    name: {{ .Chart.Name }}-api
+    app: {{ .Chart.Name }}-api
+    githash: {{ .Values.deploy.imageTag | quote }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}-api
+  replicas: {{ .Values.deploy.replicas }}
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        project: {{ .Chart.Name }}
+        name: {{ .Chart.Name }}-api
+        app: {{ .Chart.Name }}-api
+    spec:
+      # Number of seconds for the containers to perform a graceful shutdown,
+      # after which it is voilently terminated. This defaults to 30s, most apps may not need to change it
+      terminationGracePeriodSeconds: {{ .Values.deploy.terminationGracePeriod }}
+      # Only schedule pods on nodes with the affinity: critical-datadog-apm label
+      {{ if .Values.affinity }}
+      nodeSelector:
+        affinity: {{ .Values.affinity }}
+      {{ end }}
+      containers:
+####################### api container ##########################
+## This is a container that runs the uvicorn+FastAPI server
+################################################################
+      - name: {{ .Chart.Name }}-api
+        # Docker image for this container
+        image: {{ .Values.deploy.ecr }}{{ .Chart.Name }}-api:{{ .Values.deploy.imageTag }}
+        volumeMounts:
+{{ if $useUDS }}
+          # Use a Unix domain socket if we're behind nginx and not running in dev mode
+          - mountPath: /run/socks
+            name: {{ .Chart.Name }}-socket
+{{ end }} # /$useUDS
+{{ if .Values.deploy.withMount }}
+          # Mount our local code into the container
+          - mountPath: /code
+            name: {{ .Chart.Name }}-components
+{{ end }} # /deploy.withMount
+        ports:
+{{ if not .Values.api.nginx.use }}
+          # Expose the TCP port if not behind nginx
+          - containerPort: {{ .Values.api.uvicorn.port }}
+            protocol: TCP
+{{ end }} # /not nginx.use
+        envFrom:
+          # Load the data from configMap into the runtime environment
+          # This allows us to use os.environ["KEY"] to look up variables
+          - configMapRef:
+              name: {{ .Chart.Name }}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 200m
+            memory: 200Mi
+{{ if not .Values.api.nginx.use }}
+        # Enable readiness and liveness checks against this container if it's not behind nginx
+{{ if .Values.api.readiness.use }}
+        # The readiness probe stops traffic to this pod if it is not ready
+{{ include "readiness" .Values.api | indent 8 }}
+{{ end }} # /readiness.use
+{{ if .Values.api.liveness.use }}
+        # The liveness probe terminates and restarts the pod if unhealthy
+{{ include "liveness" .Values.api | indent 8 }}
+{{ end }} # /liveness.use
+{{ end }} # /not nginx.use
+
+###################### nginx server container ##################
+## This is a container for an nginx server
+################################################################
+{{ if .Values.api.nginx.use }}
+      # The nginx container only gets created if the app.nginx.use field is true in values.yaml
+      - name: {{ .Chart.Name }}-nginx
+        image: nginx:1.17-alpine
+        ports:
+          - containerPort: {{ .Values.api.nginx.port }}
+            protocol: TCP
+        volumeMounts:
+          - mountPath: /etc/nginx/
+            name: {{ .Chart.Name }}-nginx
+          # Mount html directory that should contain an index.html file written by the init container
+          - mountPath: /usr/share/nginx/html
+            name: workdir
+{{ if $useUDS }}
+          # We use Unix domain sockets for the upstream transport unless we're developing code
+          - mountPath: /run/socks
+            name: {{ .Chart.Name }}-socket
+{{ end }} # /$useUDS
+        envFrom:
+          # Load the data from configMap into the runtime environment
+          # This allows us to use os.environ["KEY"] to look up variables
+          - configMapRef:
+              name: {{ .Chart.Name }}
+        resources:
+          requests:
+            cpu: 100m
+{{ if .Values.api.readiness.use }}
+        # The readiness probe stops traffic to this pod if it is not ready
+{{ include "readiness" .Values.api | indent 8 }}
+{{ end }} # /readiness.use
+{{ if .Values.api.liveness.use }}
+        # The liveness probe terminates and restarts the pod if unhealthy
+{{ include "liveness" .Values.api | indent 8 }}
+{{ end }} # /liveness.use
+{{ end }} # /nginx.use
+
+###################### init containers #########################
+## initContainers must run and successfully exit before the pod
+## can start. If it fails, K8s will restart the initContainers
+## until it is successful.
+## You can have multiple initContainers. They will execute
+## sequentially.
+################################################################
+      initContainers:
+{{ if .Values.api.nginx.use }}
+      # writes a short message into index.html into a mounted volume file shared by nginx
+      # this will be the default page that shows up when sending get requests to nginx that
+      # are not forwarded to uvicorn
+      - name: install
+        image: busybox
+        command: ["sh", "-c", "printf '\n You have reached NGINX \n \n' > /work-dir/index.html"]
+        volumeMounts:
+        - name: workdir
+          mountPath: "/work-dir"
+{{ end }} # /nginx.use
+{{ if .Values.redis.create }}
+      # initContainer that checks that redis contianer is up and running
+{{ include "redis_check" . | indent 6 }}
+      # initContainer that populates redis, only runs if the previous one terminates successfully
+{{ include "redis_populate" . | indent 6 }}
+{{ end }} # /redis.create
+      # initContainers that check that elasticsearch container is up and running, populates it if it is
+{{ if .Values.elasticsearch.create }}
+{{ include "elasticsearch_check" . | indent 6 }}
+{{ if .Values.elasticsearch.populate }}
+{{ include "elasticsearch_populate" . | indent 6}}
+{{ end }} # /elasticsearch.populate
+{{ end }} # /elasticsearch.create
+###################### end of containers #######################
+################################################################
+
+      # Specify volumes that will be mounted in the containers
+      volumes:
+{{ if .Values.api.nginx.use }}
+        - name: {{ .Chart.Name }}-nginx
+          configMap:
+            name: {{ .Chart.Name }}-nginx
+{{ if $useUDS }}
+        - name: {{ .Chart.Name }}-socket
+          emptyDir:
+            medium: Memory
+{{ end }} # /not $devMode
+        - name: workdir
+          emptyDir: {}
+{{ end }} # /nginx.use
+{{ if .Values.deploy.withMount }}
+        - name: {{ .Chart.Name }}-components
+          hostPath:
+            path: {{ .Values.deploy.mountPath }}/components
+{{ end }} # /deploy.withMount

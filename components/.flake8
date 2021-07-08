@@ -1,0 +1,6 @@
+# Utilized by the pipeline-flake8 component, but the rules apply to all component code.
+
+[flake8]
+max-line-length=100
+import-order-style = spoqa
+application-import-names = shared

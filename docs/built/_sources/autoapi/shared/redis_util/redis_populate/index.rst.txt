@@ -1,0 +1,20 @@
+:mod:`shared.redis_util.redis_populate`
+=======================================
+
+.. py:module:: shared.redis_util.redis_populate
+
+.. autoapi-nested-parse::
+
+   Functionality to populate the redis cluster with some initial data.
+
+
+
+Module Contents
+---------------
+
+.. function:: populate(connection: StrictRedis)
+   :async:
+
+   Create a single boilerplate record in the elasticsearch cluster.
+
+

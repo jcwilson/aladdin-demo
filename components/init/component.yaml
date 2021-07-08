@@ -1,0 +1,6 @@
+meta:
+  version: 1
+language:
+  name: python
+dependencies:
+- shared

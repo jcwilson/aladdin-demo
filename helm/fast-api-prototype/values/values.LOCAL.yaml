@@ -1,0 +1,23 @@
+# Values here will overwrite values.yaml defaults. These values are used when deploying locally to minikube
+
+api:
+  uvicorn:
+    workers: 1
+    logColors: true
+  apm:
+    datadogEnv: local
+  liveness:
+    use: false
+  readiness:
+    use: false
+
+lab:
+  use: true
+
+redis:
+  create: true
+
+elasticsearch:
+  create: true
+  populate: true
+

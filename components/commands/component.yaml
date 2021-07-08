@@ -1,0 +1,12 @@
+meta:
+  version: 1
+language:
+  name: python
+image:
+  base: fivestarsos/commands-base:2.0.0
+  user:
+    name: root
+    group: root
+    home: /root
+dependencies:
+- shared

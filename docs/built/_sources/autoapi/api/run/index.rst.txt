@@ -1,0 +1,19 @@
+:mod:`api.run`
+==============
+
+.. py:module:: api.run
+
+.. autoapi-nested-parse::
+
+   Makes the FastAPI application available to uvicorn.
+
+
+
+Module Contents
+---------------
+
+.. data:: app
+   
+
+   
+

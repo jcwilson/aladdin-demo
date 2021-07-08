@@ -1,0 +1,18 @@
+{{ if .Values.lab.use }}
+
+# ConfigMap for jupyter
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-jupyter
+  labels:
+    project: {{ .Chart.Name }}
+    app: {{ .Chart.Name }}-jupyter
+    name: {{ .Chart.Name }}-jupyter
+    githash: {{ .Values.deploy.imageTag | quote }}
+data:
+  # Make the key the desired name for the file
+  # When mounted, this will create a jupyter.conf file with the contents in jupyter-config template
+  jupyter_notebook_config.py: {{ include "jupyter-config" . | quote }}
+
+{{ end }}

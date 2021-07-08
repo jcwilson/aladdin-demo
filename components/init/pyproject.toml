@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "init"
+version = "0.1.0"
+description = "Kubernetes init containers"
+authors = ["Fivestars <dev@fivestarss.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.scripts]
+populate-redis = "init.populate_redis:main"
+populate-elasticsearch = "init.populate_elasticsearch:main"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

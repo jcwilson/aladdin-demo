@@ -1,0 +1,19 @@
+:mod:`shared.elasticsearch_util.elasticsearch_populate`
+=======================================================
+
+.. py:module:: shared.elasticsearch_util.elasticsearch_populate
+
+.. autoapi-nested-parse::
+
+   Functionality to populate the elasticsearch cluster with some initial data.
+
+
+
+Module Contents
+---------------
+
+.. function:: populate(connection: Elasticsearch)
+
+   Create a single boilerplate record in the elasticsearch cluster.
+
+

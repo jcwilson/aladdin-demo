@@ -1,0 +1,8 @@
+# Values here will overwrite values.yaml defaults. These values are used when deploying to KPROD cluster
+
+api:
+  apm:
+    enable: true
+    datadogEnv: prod
+
+affinity: critical-datadog-apm

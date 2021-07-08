@@ -1,0 +1,2 @@
+
+ENTRYPOINT ["api/entrypoint.sh"]

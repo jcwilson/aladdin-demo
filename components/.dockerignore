@@ -1,0 +1,7 @@
+**/.dockerignore
+**/Dockerfile*
+**/*.dockerfile
+**/*.Dockerfile
+**/__pycache__
+**/component.yaml
+**/*.egg-info

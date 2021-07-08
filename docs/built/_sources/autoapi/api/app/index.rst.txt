@@ -1,0 +1,19 @@
+:mod:`api.app`
+==============
+
+.. py:module:: api.app
+
+.. autoapi-nested-parse::
+
+   The FastAPI application endpoints.
+
+
+
+Module Contents
+---------------
+
+.. function:: create_app()
+
+   Create the FastAPI application.
+
+
